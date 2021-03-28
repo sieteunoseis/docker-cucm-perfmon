@@ -1,21 +1,18 @@
-# LookingPoint LogicMonitor API Gateway
+# Cisco CUCM Perfmon Docker Gateway
 
-NodeJS application using LogicMonitor, Airtable, Ngrok and Zapier to add users to LogicMonitor
+NodeJS application using Cisco Perfmon API to send data to InfluxDB cloud.
 
 ## Install
 
 ```node
 npm run docker:build
+npm run docker:run
 ```
 
 ## Needed Enviromental Variables
 
 ```node
-LM_API_TOKEN=
-LM_ACCESS_ID=
-NODE_ENV=development
-NGROK_SUBDOMAIN=
-NGROK_AUTH_TOKEN=
+
 ```
 
 Save to docker.txt file within project.
