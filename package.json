@@ -1,19 +1,15 @@
 {
   "name": "docker-cucm-perfmon",
-  "version": "1.5.0",
+  "version": "1.6.1",
   "private": true,
   "scripts": {
-    "docker:build": "docker build -t sieteunoseis/$npm_package_name:$npm_package_version -t sieteunoseis/$npm_package_name:latest .",
-    "docker:run": "docker run --env-file docker.txt -d sieteunoseis/$npm_package_name:latest",
-    "docker:stop": "docker stop $(docker ps -q --filter ancestor=sieteunoseis/$npm_package_name)",
-    "docker:list": "docker container ls",
+    "docker:build": "docker build --platform linux/amd64 -t sieteunoseis/$npm_package_name:$npm_package_version -t sieteunoseis/$npm_package_name:latest .",
     "docker:push": "docker push sieteunoseis/$npm_package_name:$npm_package_version && docker push sieteunoseis/$npm_package_name:latest",
-    "docker:prune": "docker system prune -a",
-    "docker:logs": "docker logs -f $(docker ps -q --filter ancestor=sieteunoseis/$npm_package_name )"
+    "docker:prune": "docker system prune -a"
   },
   "dependencies": {
     "@influxdata/influxdb-client": "*",
-    "cisco-axl-perfmon": "github:sieteunoseis/cisco-axl-perfmon",
+    "cisco-axl-perfmon": "*",
     "dotenv": "*"
   }
 }

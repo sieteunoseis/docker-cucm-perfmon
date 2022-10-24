@@ -55,7 +55,7 @@ setInterval(function () {
             .catch((err) => {
               console.log(server + " PERFMONCOLLECTCOUNTERDATA(GET COUNTER DATA): " + err + " " + object);
             });
-          if (perfmonCounters) {
+          if (Array.isArray(perfmonCounters)) {
             for (const counter of perfmonCounters) {
               var regExp = /\(([^)]+)\)/;
               var nameSplit = counter["NS1:NAME"].split("\\");
