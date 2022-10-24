@@ -12,7 +12,18 @@ npm run docker:run
 ## Needed Enviromental Variables
 
 ```node
-
+NODE_ENV=production
+CUCM_VERSION=<INSERT VERSION I.E. 12.5>
+CUCM_PUB=<INSERT IP ADDRESS>
+CUCM_USERNAME=<INSERT USERNAME>
+CUCM_PASSWORD=<INSERT PASSWORD>
+TIMER=3000
+INFLUXDB_TOKEN=<INSERT INFLUXDB TOKEN>
+INFLUXDB_ORG=<INSERT INFLUXDB ORG>
+INFLUXDB_BUCKET=cisco_cucm
+INFLUXDB_URL=<INSERT INFLUXDB URL>
+PERFMON_COUNTER_ARR=["Cisco Annunciator Device","Cisco AXL Web Service","Cisco Call Restriction","Cisco CallManager","Cisco CallManager System Performance","Cisco CAR DB","Cisco CTI Manager","Cisco Device Activation","Cisco Dual-Mode Mobility","Cisco Extension Mobility","Cisco Hunt Lists","Cisco Hunt Pilots","Cisco IP Manager Assistant","Cisco IVR Device","Cisco LBM Service","Cisco LDAP Directory","Cisco Locations LBM","Cisco Locations RSVP","Cisco Media Streaming App","Cisco Mobility Manager","Cisco MOH Device","Cisco MTP Device","Cisco Presence Features","Cisco QSIG Features","Cisco Recording","Cisco SAF Client","Cisco Signaling","Cisco SIP","Cisco SIP Line Normalization","Cisco SIP Normalization","Cisco SIP Stack","Cisco SIP Station","Cisco SW Conference Bridge Device","Cisco TFTP","Cisco Tomcat Connector","Cisco Tomcat JVM","Cisco Tomcat Web Application","Cisco Transcode Device","Cisco WebDialer","DB Local_DSN","DB User Host Information Counters","Enterprise Replication DBSpace Monitors","IP","IP6","Memory","Network Interface","Number of Replicates Created and State of Replication","Partition","Ramfs","SAML SSO","System","TCP","Thread"]
+PERFMON_SESSION_ARR=["Processor"]
 ```
 
 Save to docker.txt file within project.
