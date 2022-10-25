@@ -43,7 +43,7 @@ setInterval(function () {
       process.exit(1); // Restart if hit an error
     });
   
-    console.log("PERFMONCOLLECTCOUNTERDATA(GET SERVERS): Found the following servers: " + JSON.stringify(servers))
+    console.log("PERFMONCOLLECTCOUNTERDATA(GET SERVERS): Found the following servers: " + JSON.stringify(servers));
   
     for (const server of servers) {
       for (const object of perfmonObjectArr) {

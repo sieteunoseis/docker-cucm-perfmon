@@ -151,74 +151,75 @@ setInterval(function () {
                         err
                     );
                   });
+                if (Array.isArray(ciscoPerfmonSessionData)) {
+                  ciscoPerfmonSessionData.then(async function (result) {
+                    console.log(
+                      server +
+                        " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): Retrieving updated data for " +
+                        object
+                    );
 
-                ciscoPerfmonSessionData.then(async function (result) {
-                  console.log(
-                    server +
-                      " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): Retrieving updated data for " +
-                      object
-                  );
+                    for (const counter of result) {
+                      var regExp = /\(([^)]+)\)/;
+                      var nameSplit = counter["NS1:NAME"].split("\\");
+                      nameSplit = nameSplit.filter(function (el) {
+                        return el;
+                      });
 
-                  for (const counter of result) {
-                    var regExp = /\(([^)]+)\)/;
-                    var nameSplit = counter["NS1:NAME"].split("\\");
-                    nameSplit = nameSplit.filter(function (el) {
-                      return el;
-                    });
-
-                    var matches = regExp.exec(nameSplit[1]);
-                    writeApi.useDefaultTags({ host: server });
-                    if (!Array.isArray(matches)) {
-                      points.push(
-                        new Point(object).floatField(
-                          nameSplit[2],
-                          counter["NS1:VALUE"]
-                        )
-                      );
-                    } else {
-                      points.push(
-                        new Point(object)
-                          .tag("instance", matches[1])
-                          .floatField(nameSplit[2], counter["NS1:VALUE"])
-                      );
+                      var matches = regExp.exec(nameSplit[1]);
+                      writeApi.useDefaultTags({ host: server });
+                      if (!Array.isArray(matches)) {
+                        points.push(
+                          new Point(object).floatField(
+                            nameSplit[2],
+                            counter["NS1:VALUE"]
+                          )
+                        );
+                      } else {
+                        points.push(
+                          new Point(object)
+                            .tag("instance", matches[1])
+                            .floatField(nameSplit[2], counter["NS1:VALUE"])
+                        );
+                      }
                     }
-                  }
 
-                  writeApi.writePoints(points);
-                  writeApi
-                    .close()
-                    .then(() => {
-                      console.log(
-                        server +
-                          " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): FINISHED WRITING " +
-                          object.toUpperCase() +
-                          " DATA TO INFLUXDB"
-                      );
-                    })
-                    .catch((e) => {
-                      console.log(
-                        server +
-                          " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): Finished ERROR"
-                      );
-                    });
+                    writeApi.writePoints(points);
+                    writeApi
+                      .close()
+                      .then(() => {
+                        console.log(
+                          server +
+                            " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): FINISHED WRITING " +
+                            object.toUpperCase() +
+                            " DATA TO INFLUXDB"
+                        );
+                      })
+                      .catch((e) => {
+                        console.log(
+                          server +
+                            " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): Finished ERROR"
+                        );
+                      });
 
-                  // Close session
-                  var closeResults = await service
-                    .closePerfmonSessionData(perfmonSessionID)
-                    .catch((err) => {
-                      console.log(
-                        server +
-                          " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
-                          err
-                      );
-                    });
+                    // Close session
+                    var closeResults = await service
+                      .closePerfmonSessionData(perfmonSessionID)
+                      .catch((err) => {
+                        console.log(
+                          server +
+                            " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
+                            err
+                        );
+                      });
 
-                  console.log(
-                    server +
-                      " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
-                      JSON.stringify(closeResults)
-                  );
-                });
+                    console.log(
+                      server +
+                        " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
+                        JSON.stringify(closeResults)
+                    );
+                  });
+                }
               });
             });
           });
