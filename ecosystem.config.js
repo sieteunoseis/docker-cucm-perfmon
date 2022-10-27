@@ -1,20 +1,11 @@
 module.exports = [
   {
-    script: "perfmonCollectCounterData.js",
-    name: "Collect Counter Data",
+    script: "main.js",
+    name: "Collect RisPort Data",
     watch: true,
     autorestart: true,
     exp_backoff_restart_delay: 360000,
     exec_mode: "cluster",
     instances: 1,
-  },
-  {
-    script: "perfmonCollectSessionData.js",
-    name: "Collect Session Data",
-    watch: true,
-    autorestart: true,
-    exp_backoff_restart_delay: 360000,
-    exec_mode: "cluster",
-    instances: 1,
-  },
+  }
 ];
