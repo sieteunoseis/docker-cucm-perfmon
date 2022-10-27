@@ -1,0 +1,15 @@
+{
+  "name": "docker-cucm-perfmon",
+  "version": "1.6.3",
+  "private": true,
+  "scripts": {
+    "docker:build": "docker build --platform linux/amd64 -t sieteunoseis/$npm_package_name:$npm_package_version -t sieteunoseis/$npm_package_name:latest .",
+    "docker:push": "docker push sieteunoseis/$npm_package_name:$npm_package_version && docker push sieteunoseis/$npm_package_name:latest",
+    "docker:prune": "docker system prune -a"
+  },
+  "dependencies": {
+    "@influxdata/influxdb-client": "*",
+    "cisco-axl-perfmon": "*",
+    "dotenv": "*"
+  }
+}
