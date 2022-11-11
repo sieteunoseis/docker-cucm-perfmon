@@ -1,5 +1,9 @@
-const axlModule = require("cisco-axl-perfmon");
+const axlService = require("cisco-axl");
+const perfMonService = require("cisco-perfmon");
+const { setIntervalAsync } = require("set-interval-async");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
+
+// Cool down function
 const sleep = (waitTimeInMs) =>
   new Promise((resolve) => setTimeout(resolve, waitTimeInMs));
 
@@ -16,7 +20,8 @@ const client = new InfluxDB({
   token: token,
 });
 
-const timer = process.env.TIMER; // Timer in milliseconds
+const timer = process.env.COOLDOWN_TIMER; // Timer in milliseconds
+const interval = process.env.SESSION_INTERVAL; // Timer in milliseconds
 
 var settings = {
   version: process.env.CUCM_VERSION,
@@ -25,206 +30,182 @@ var settings = {
   cucmpass: process.env.CUCM_PASSWORD,
 };
 
-var service = axlModule(
-  settings.version,
+const perfmonObjectArr = process.env.PERFMON_SESSIONS.split(",");
+
+var axl_service = new axlService(
   settings.cucmip,
   settings.cucmuser,
-  settings.cucmpass
+  settings.cucmpass,
+  settings.version
 );
 
-const perfmonObjectArr = JSON.parse(process.env.PERFMON_SESSION_ARR);
-var perfmonSessionID;
-var perfmonCounterArr = [];
+var perfmon_service = new perfMonService(
+  settings.cucmip,
+  settings.cucmuser,
+  settings.cucmpass,
+  settings.version
+);
 
-setInterval(function () {
+setIntervalAsync(async () => {
   console.log(
-    "PERFMON COLLECT SESSION DATA(STARTING INTERVAL): WILL RERUN 5 MINS AFTER COMPLETION"
+    "----------------------------------------------------------------------------------------------------------"
   );
-  (async () => {
-    // Let's get the servers via AXL
-    var servers = await service.getServers().catch((err) => {
-      console.log("PERFMONCOLLECTSESSIONDATA(GET SERVERS): " + err);
-      process.exit(1); // Restart if hit an error
+  console.log(
+    `PERFMON SESSION DATA: Starting interval, collection will run every ${
+      interval / 1000
+    } seconds after last counter collected.`
+  );
+
+  // Let's get the servers via AXL
+  var operation = "listCallManager";
+  var tags = await axl_service.getOperationTags(operation);
+  tags.searchCriteria.name = "%%";
+  var servers = await axl_service
+    .executeOperation(operation, tags)
+    .catch((error) => {
+      console.log(error);
     });
 
-    console.log(
-      "PERFMONCOLLECTSESSIONDATA(GET SERVERS): Found the following servers: " +
-        JSON.stringify(servers)
-    );
-    for (const server of servers) {
-      for (const object of perfmonObjectArr) {
-        const writeApi = client.getWriteApi(org, bucket);
-        var points = [];
-        // BUILD ARRAY FOR COLLECT SESSION DATA
-        var perfmonCounterData = service
-          .getPerfmonCounterData(server, object)
-          .catch((err) => {
-            console.log(
-              server + " PERFMONCOLLECTSESSIONDATA(GET COUNTER DATA): " + err
-            );
-          });
+  console.log(
+    `PERFMON SESSION DATA: Found ${servers.callManager.length} servers.`
+  );
 
-        perfmonCounterData.then(function (results) {
-          results.forEach((element) => {
-            perfmonCounterArr.push(
-              element["NS1:NAME"].replace(/\\\\/g, "\\").replace(/^/, "\\")
-            ); // Replace double backslash with single
-          });
+  for (const server of servers.callManager) {
+    for (const object of perfmonObjectArr) {
+      const writeApi = client.getWriteApi(org, bucket);
+      var points = [];
+      await sleep(timer).then(async () => {
+        console.log(
+          `PERFMON SESSION DATA: Starting cooldown between each object for ${
+            timer / 1000
+          } seconds.`
+        );
+
+        var counters = await perfmon_service.listCounter(server.name); // Get all the counters from the server
+
+        if (!Array.isArray(counters)) {
+          process.exit(2);
+        }
+
+        // Filter out the one we want for now
+        var filteredArr = counters.filter((counter) => {
+          return counter.Name === object;
         });
 
-        // OPEN SESSION
-        var ciscoPerfmonSession = service.getPerfmonSession().catch((err) => {
-          console.log(
-            server + " PERFMONCOLLECTSESSIONDATA(GET SESSION): " + err
+        var objInstance = await perfmon_service.listInstance(
+          server.name,
+          object
+        );
+
+        // If we only get back a single value, lets put it in an array anyways :/
+        if (!Array.isArray(objInstance)) {
+          var temp = objInstance;
+          objInstance = [];
+          objInstance.push(temp);
+        }
+
+        // Get session id for this counter
+        var SessionID = await perfmon_service.openSession().catch((error) => {
+          console.log(error);
+        });
+
+        console.log(`PERFMON SESSION DATA: ${SessionID}`);
+
+        var counterObjArr = [];
+
+        for (let instance of objInstance) {
+          // loop thru each counter and add to session id
+          for (let item of filteredArr[0].ArrayOfCounter.item) {
+            if (item.Name.includes("Percentage") || item.Name.includes("%")) {
+              let counterObj = {
+                host: server.name,
+                object: `${object}(${instance.Name})`,
+                counter: item.Name,
+              };
+              counterObjArr.push(counterObj);
+            }
+          }
+        }
+
+        let addCounter = await perfmon_service
+          .addCounter(SessionID, counterObjArr)
+          .catch((error) => {
+            console.log(error);
+          });
+
+        console.log(
+          `PERFMON SESSION DATA: addCounter status ${addCounter.response}`
+        );
+
+        var baseLineResults = await perfmon_service
+          .collectSessionData(SessionID)
+          .catch((error) => {
+            console.log(error);
+          });
+
+        console.log(
+          `PERFMON SESSION DATA: Collecting baseline results, ${baseLineResults.length} results collected.`
+        );
+
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        console.log(
+          "PERFMON SESSION DATA: Waiting 15 seconds before collecting data"
+        );
+        await delay(15000); /// waiting 30 second.
+
+        let results = await perfmon_service
+          .collectSessionData(SessionID)
+          .catch((error) => {
+            console.log(error);
+          });
+
+        results.forEach(function (result) {
+          points.push(
+            new Point(object.object)
+              .tag("host", object.host)
+              .tag("cstatus", object.cstatus)
+              .floatField(object.counter, object.value)
           );
         });
 
-        ciscoPerfmonSession.then(function (result) {
-          console.log(
-            server + " PERFMONCOLLECTSESSIONDATA(GET SESSION): " + result
-          );
-          perfmonSessionID = result;
+        console.log(
+          `PERFMON SESSION DATA: Collecting results, ${results.length} results collected.`
+        );
 
-          // ADD COUNTERS
-          var ciscoPerfmonAddCounter = service
-            .addPerfmonCounter(perfmonSessionID, perfmonCounterArr)
-            .catch((err) => {
-              console.log(
-                server + " PERFMONCOLLECTSESSIONDATA(ADD COUNTER): " + err
-              );
-              // Close session
-              var ciscoClosePerfmonSession = service
-                .closePerfmonSessionData(perfmonSessionID)
-                .catch((err) => {
-                  console.log(
-                    server + " PERFMONCOLLECTSESSIONDATA(CLOSE COUNTER): " + err
-                  );
-                });
-
-              ciscoClosePerfmonSession.then(function (result) {
-                console.log(
-                  server +
-                    " PERFMONCOLLECTSESSIONDATA(CLOSE COUNTER): " +
-                    JSON.stringify(result)
-                );
-              });
-            });
-
-          // Get base line 0 value counters
-          ciscoPerfmonAddCounter.then(function (result) {
-            console.log(
-              server +
-                " PERFMONCOLLECTSESSIONDATA(ADD COUNTER): " +
-                JSON.stringify(result)
-            );
-
-            var ciscoPerfmonSessionData = service
-              .getPerfmonSessionData(perfmonSessionID)
-              .catch((err) => {
-                console.log(
-                  server +
-                    " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): " +
-                    err
-                );
-              });
-
-            ciscoPerfmonSessionData.then(async function (result) {
-              console.log(
-                server +
-                  " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): Retrieving baseline data for " +
-                  object
-              );
-
-              // Sleep 15 seconds to allow counters to increment
-              console.log(
-                server +
-                  " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): Sleeping for 15000"
-              );
-              await sleep(15000).then(() => {
-                // This will execute 15 seconds from now
-                var ciscoPerfmonSessionData = service
-                  .getPerfmonSessionData(perfmonSessionID)
-                  .catch((err) => {
-                    console.log(
-                      server +
-                        " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): " +
-                        err
-                    );
-                  });
-                if (Array.isArray(ciscoPerfmonSessionData)) {
-                  ciscoPerfmonSessionData.then(async function (result) {
-                    console.log(
-                      server +
-                        " PERFMONCOLLECTSESSIONDATA(GET SESSION DATA): Retrieving updated data for " +
-                        object
-                    );
-
-                    for (const counter of result) {
-                      var regExp = /\(([^)]+)\)/;
-                      var nameSplit = counter["NS1:NAME"].split("\\");
-                      nameSplit = nameSplit.filter(function (el) {
-                        return el;
-                      });
-
-                      var matches = regExp.exec(nameSplit[1]);
-                      writeApi.useDefaultTags({ host: server });
-                      if (!Array.isArray(matches)) {
-                        points.push(
-                          new Point(object).floatField(
-                            nameSplit[2],
-                            counter["NS1:VALUE"]
-                          )
-                        );
-                      } else {
-                        points.push(
-                          new Point(object)
-                            .tag("instance", matches[1])
-                            .floatField(nameSplit[2], counter["NS1:VALUE"])
-                        );
-                      }
-                    }
-
-                    writeApi.writePoints(points);
-                    writeApi
-                      .close()
-                      .then(() => {
-                        console.log(
-                          server +
-                            " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): FINISHED WRITING " +
-                            object.toUpperCase() +
-                            " DATA TO INFLUXDB"
-                        );
-                      })
-                      .catch((e) => {
-                        console.log(
-                          server +
-                            " PERFMONCOLLECTSESSIONDATA(INFLUXDB WRITE): Finished ERROR"
-                        );
-                      });
-
-                    // Close session
-                    var closeResults = await service
-                      .closePerfmonSessionData(perfmonSessionID)
-                      .catch((err) => {
-                        console.log(
-                          server +
-                            " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
-                            err
-                        );
-                      });
-
-                    console.log(
-                      server +
-                        " PERFMONCOLLECTSESSIONDATA(CLOSE SESSION): " +
-                        JSON.stringify(closeResults)
-                    );
-                  });
-                }
-              });
-            });
+        let removeCounter = await perfmon_service
+          .removeCounter(SessionID, counterObjArr)
+          .catch((error) => {
+            console.log(error);
           });
-        });
-      }
+
+        console.log(
+          `PERFMON SESSION DATA: Removing counters ${removeCounter.response}.`
+        );
+
+        var closeSession = await perfmon_service
+          .closeSession(SessionID)
+          .catch((error) => {
+            console.log(error);
+          });
+
+        console.log(
+          `PERFMON SESSION DATA: Closing session ${closeSession.response}.`
+        );
+
+        writeApi.writePoints(points);
+        writeApi
+          .close()
+          .then(() => {
+            console.log(
+              `PERFMON SESSION DATA: Wrote point for ${object} to InfluxDB bucket ${bucket}`
+            );
+          })
+          .catch((e) => {
+            console.log("PERFMON SESSION DATA: InfluxDB write failed", e);
+            process.exit(2);
+          });
+
+      });
     }
-  })();
-}, 300000);
+  }
+}, parseInt(interval));

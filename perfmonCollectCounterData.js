@@ -1,5 +1,13 @@
-const axlModule = require("cisco-axl-perfmon");
-const { InfluxDB, Point } = require("@influxdata/influxdb-client");
+const axlService = require("cisco-axl");
+const perfMonService = require("cisco-perfmon");
+const { setIntervalAsync, clearIntervalAsync } = require("set-interval-async");
+const {
+  InfluxDB,
+  Point,
+  consoleLogger,
+} = require("@influxdata/influxdb-client");
+
+// Cool down function
 const sleep = (waitTimeInMs) =>
   new Promise((resolve) => setTimeout(resolve, waitTimeInMs));
 
@@ -16,7 +24,8 @@ const client = new InfluxDB({
   token: token,
 });
 
-const timer = process.env.TIMER; // Timer in milliseconds
+const timer = process.env.COOLDOWN_TIMER; // Timer in milliseconds
+const interval = process.env.COUNTER_TIMER; // Timer in milliseconds
 
 var settings = {
   version: process.env.CUCM_VERSION,
@@ -25,80 +34,90 @@ var settings = {
   cucmpass: process.env.CUCM_PASSWORD,
 };
 
-const perfmonObjectArr = JSON.parse(process.env.PERFMON_COUNTER_ARR);
+const perfmonObjectArr = process.env.PERFMON_COUNTERS.split(",");
 
-var service = axlModule(
-  settings.version,
+var axl_service = new axlService(
   settings.cucmip,
   settings.cucmuser,
-  settings.cucmpass
+  settings.cucmpass,
+  settings.version
 );
 
-setInterval(function () {
-  console.log("PERFMONCOLLECTCOUNTERDATA: STARTING INTERVAL. WILL RERUN 5 MINS AFTER COMPLETION");
-  (async () => {
-    // Let's get the servers via AXL
-    var servers = await service.getServers().catch((err) => {
-      console.log("PERFMONCOLLECTCOUNTERDATA(GET SERVERS): " + err);
-      process.exit(1); // Restart if hit an error
+var perfmon_service = new perfMonService(
+  settings.cucmip,
+  settings.cucmuser,
+  settings.cucmpass,
+  settings.version
+);
+
+setIntervalAsync(async () => {
+  console.log("--------------------------------------------------");
+  console.log(
+    `PERFMON DATA: Starting interval, collection will run every ${
+      interval / 1000
+    } seconds after last counter collected.`
+  );
+  // Let's get the servers via AXL
+  var operation = "listCallManager";
+  var tags = await axl_service.getOperationTags(operation);
+  tags.searchCriteria.name = "%%";
+  var servers = await axl_service
+    .executeOperation(operation, tags)
+    .catch((error) => {
+      console.log(error);
     });
-  
-    console.log("PERFMONCOLLECTCOUNTERDATA(GET SERVERS): Found the following servers: " + JSON.stringify(servers));
-  
-    for (const server of servers) {
-      for (const object of perfmonObjectArr) {
-        const writeApi = client.getWriteApi(org, bucket);
-        var points = [];
-        await sleep(timer).then(async () => {
-          var perfmonCounters = await service
-            .getPerfmonCounterData(server, object)
-            .catch((err) => {
-              console.log(server + " PERFMONCOLLECTCOUNTERDATA(GET COUNTER DATA): " + err + " " + object);
-            });
-          if (Array.isArray(perfmonCounters)) {
-            for (const counter of perfmonCounters) {
-              var regExp = /\(([^)]+)\)/;
-              var nameSplit = counter["NS1:NAME"].split("\\");
-              nameSplit = nameSplit.filter(function (el) {
-                return el;
-              });
-  
-              var matches = regExp.exec(nameSplit[1]);
-              writeApi.useDefaultTags({ host: server });
-              if (!Array.isArray(matches)) {
-                points.push(
-                  new Point(object).floatField(nameSplit[2], counter["NS1:VALUE"])
-                );
-              } else {
-                points.push(
-                  new Point(object)
-                    .tag("instance", matches[1])
-                    .floatField(nameSplit[2], counter["NS1:VALUE"])
-                );
-              }
-            }
-  
-            writeApi.writePoints(points);
-            writeApi
-              .close()
-              .then(() => {
-                console.log(
-                  server + " PERFMONCOLLECTCOUNTERDATA(INFLUXDB WRITE): FINISHED WRITING " + object.toUpperCase() + " DATA TO INFLUXDB"
-                );
-              })
-              .catch((e) => {
-                console.log(server + " PERFMONCOLLECTCOUNTERDATA(INFLUXDB WRITE): Finished ERROR");
-              });
-  
-            console.log(
-              server + " PERFMONCOLLECTCOUNTERDATA(INTERVAL): Sleeping for " +
-                timer +
-                " between Perfmon Object. Finished processing: " +
-                object
+
+  console.log(`PERFMON DATA: Found ${servers.callManager.length} servers.`);
+
+  for (const server of servers.callManager) {
+    for (const object of perfmonObjectArr) {
+      const writeApi = client.getWriteApi(org, bucket);
+      var points = [];
+      await sleep(timer).then(async () => {
+        console.log(
+          `PERFMON COUNTER DATA: Starting cooldown between each object for ${
+            timer / 1000
+          } seconds.`
+        );
+        var perfmonOutput = await perfmon_service
+          .collectCounterData(server.processNodeName.value, object)
+          .catch((error) => {
+            console.log("Error", error);
+          });
+
+        if (Array.isArray(perfmonOutput)) {
+          // Filtering out non percentage values. We want to use session data to log this values
+          const nonPercentage = perfmonOutput.filter(object => (!object.counter.includes("%") && !object.counter.includes("Percentage")));
+          nonPercentage.forEach((object) => {
+            points.push(
+              new Point(object.object)
+                .tag("host", object.host)
+                .tag("cstatus", object.cstatus)
+                .floatField(object.counter, object.value)
             );
+          });
+        } else {
+          if (perfmonOutput.response === "empty") {
+            console.log(`PERFMON COUNTER DATA: No data for ${object}`);
+          } else {
+            console.log("Sending exit to system");
+            process.exit(1);
           }
-        });
-      }
+        }
+
+        writeApi.writePoints(points);
+        writeApi
+          .close()
+          .then(() => {
+            console.log(
+              `PERFMON COUNTER DATA: Wrote point for ${object} to InfluxDB bucket ${bucket}`
+            );
+          })
+          .catch((e) => {
+            console.log("PERFMON COUNTER DATA: InfluxDB write failed", e);
+            process.exit(2);
+          });
+      });
     }
-  })();
-}, 300000);
+  }
+}, parseInt(interval));

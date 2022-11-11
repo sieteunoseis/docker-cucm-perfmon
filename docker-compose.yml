@@ -1,0 +1,4 @@
+perfmon:
+  image: sieteunoseis/docker-cucm-perfmon:latest
+  env_file:
+    - .env
