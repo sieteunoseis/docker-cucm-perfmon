@@ -95,8 +95,6 @@ setIntervalAsync(async () => {
               !object.counter.includes("Percentage")
           );
 
-          console.log(nonPercentage);
-
           nonPercentage.forEach((object) => {
             points.push(
               new Point(object.object)
