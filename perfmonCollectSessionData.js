@@ -20,8 +20,8 @@ const client = new InfluxDB({
   token: token,
 });
 
-const timer = process.env.COOLDOWN_TIMER; // Timer in milliseconds
-const interval = process.env.SESSION_INTERVAL; // Timer in milliseconds
+const timer = process.env.COOLDOWN_TIMER || 3000; // Timer in milliseconds
+const interval = process.env.SESSION_INTERVAL || 30000; // Interval in milliseconds
 
 var settings = {
   version: process.env.CUCM_VERSION,
@@ -161,10 +161,11 @@ setIntervalAsync(async () => {
 
         results.forEach(function (result) {
           points.push(
-            new Point(object.object)
-              .tag("host", object.host)
-              .tag("cstatus", object.cstatus)
-              .floatField(object.counter, object.value)
+            new Point(result.object)
+              .tag("host", result.host)
+              .tag("cstatus", result.cstatus)
+              .tag("instance", result.instance)
+              .floatField(result.counter,result.value)
           );
         });
 

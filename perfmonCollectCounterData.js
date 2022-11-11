@@ -24,8 +24,8 @@ const client = new InfluxDB({
   token: token,
 });
 
-const timer = process.env.COOLDOWN_TIMER; // Timer in milliseconds
-const interval = process.env.COUNTER_TIMER; // Timer in milliseconds
+const timer = process.env.COOLDOWN_TIMER || 3000; // Timer in milliseconds
+const interval = process.env.COUNTER_INTERVAL || 30000; // Interval in milliseconds
 
 var settings = {
   version: process.env.CUCM_VERSION,
@@ -51,7 +51,9 @@ var perfmon_service = new perfMonService(
 );
 
 setIntervalAsync(async () => {
-  console.log("--------------------------------------------------");
+  console.log(
+    "----------------------------------------------------------------------------------------------------------"
+  );
   console.log(
     `PERFMON DATA: Starting interval, collection will run every ${
       interval / 1000
@@ -80,19 +82,27 @@ setIntervalAsync(async () => {
           } seconds.`
         );
         var perfmonOutput = await perfmon_service
-          .collectCounterData(server.processNodeName.value, object)
+          .collectCounterData(server.name, object)
           .catch((error) => {
             console.log("Error", error);
           });
 
         if (Array.isArray(perfmonOutput)) {
           // Filtering out non percentage values. We want to use session data to log this values
-          const nonPercentage = perfmonOutput.filter(object => (!object.counter.includes("%") && !object.counter.includes("Percentage")));
+          const nonPercentage = perfmonOutput.filter(
+            (object) =>
+              !object.counter.includes("%") &&
+              !object.counter.includes("Percentage")
+          );
+
+          console.log(nonPercentage);
+
           nonPercentage.forEach((object) => {
             points.push(
               new Point(object.object)
                 .tag("host", object.host)
                 .tag("cstatus", object.cstatus)
+                .tag("instance", object.instance)
                 .floatField(object.counter, object.value)
             );
           });
