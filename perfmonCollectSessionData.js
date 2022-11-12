@@ -159,19 +159,27 @@ setIntervalAsync(async () => {
             console.log(error);
           });
 
-        results.forEach(function (result) {
-          points.push(
-            new Point(result.object)
-              .tag("host", result.host)
-              .tag("cstatus", result.cstatus)
-              .tag("instance", result.instance)
-              .floatField(result.counter,result.value)
+        if (Array.isArray(results)) {
+          results.forEach(function (result) {
+            points.push(
+              new Point(result.object)
+                .tag("host", result.host)
+                .tag("cstatus", result.cstatus)
+                .tag("instance", result.instance)
+                .floatField(result.counter,result.value)
+            );
+          });
+          console.log(
+            `PERFMON SESSION DATA: Collecting results, ${results.length} results collected.`
           );
-        });
-
-        console.log(
-          `PERFMON SESSION DATA: Collecting results, ${results.length} results collected.`
-        );
+        }else {
+          if (results.response === "empty") {
+            console.log(`PERFMON SESSION DATA: No data for ${object}`);
+          } else {
+            console.log("PERFMON SESSION DATA: Sending exit to system");
+            process.exit(1);
+          }
+        }
 
         let removeCounter = await perfmon_service
           .removeCounter(SessionID, counterObjArr)

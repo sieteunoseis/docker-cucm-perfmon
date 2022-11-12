@@ -108,7 +108,7 @@ setIntervalAsync(async () => {
           if (perfmonOutput.response === "empty") {
             console.log(`PERFMON COUNTER DATA: No data for ${object}`);
           } else {
-            console.log("Sending exit to system");
+            console.log("PERFMON COUNTER DATA: Sending exit to system");
             process.exit(1);
           }
         }
