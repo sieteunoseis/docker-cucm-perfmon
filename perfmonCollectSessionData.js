@@ -73,6 +73,7 @@ try {
   
     for (const server of servers.callManager) {
       for (const object of perfmonObjectArr) {
+        console.log("PERFMON SESSION DATA: Pulling data for",object);
         const writeApi = client.getWriteApi(org, bucket);
         var points = [];
         await sleep(timer).then(async () => {
@@ -116,7 +117,7 @@ try {
   
           for (let instance of objInstance) {
             // loop thru each counter and add to session id
-            for (let item of filteredArr[0].ArrayOfCounter.item) {
+            for (let item of filteredArr[0]?.ArrayOfCounter.item) {
               if (item.Name.includes("Percentage") || item.Name.includes("%")) {
                 let counterObj = {
                   host: server.name,
