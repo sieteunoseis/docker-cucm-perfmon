@@ -1,12 +1,13 @@
 {
   "name": "docker-cucm-perfmon",
-  "version": "1.8.2",
+  "description": "Docker container to collect Cisco Perfmon stats and upload to InfluxDB.",
+  "version": "1.8.3",
   "author": "sieteunoseis",
   "private": true,
   "scripts": {
-    "docker:build": "docker build --platform linux/amd64 -t $npm_package_author/$npm_package_name:$npm_package_version -t $npm_package_author/$npm_package_name:latest .",
-    "docker:push": "docker push $npm_package_author/$npm_package_name:$npm_package_version && docker push $npm_package_author/$npm_package_name:latest",
-    "docker:run": "docker run -d --name $npm_package_name --restart=always --env-file=.env $npm_package_author/$npm_package_name:$npm_package_version",
+    "docker:build": "docker build --platform linux/amd64 -t sieteunoseis/$npm_package_name:$npm_package_version -t sieteunoseis/$npm_package_name:latest .",
+    "docker:push": "docker push sieteunoseis/$npm_package_name:$npm_package_version && docker push sieteunoseis/$npm_package_name:latest",
+    "docker:run": "docker run -d --name $npm_package_name --restart=always --env-file=.env sieteunoseis/$npm_package_name:$npm_package_version",
     "docker:remove": "docker stop $npm_package_name && docker rm $npm_package_name",
     "docker:prune": "docker system prune -a"
   },
