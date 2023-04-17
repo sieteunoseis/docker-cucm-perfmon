@@ -1,13 +1,16 @@
 {
   "name": "docker-cucm-perfmon",
   "description": "Docker container to collect Cisco Perfmon stats and upload to InfluxDB.",
-  "version": "1.8.3",
+  "version": "1.8.5",
   "author": "sieteunoseis",
   "private": true,
   "scripts": {
-    "docker:build": "docker build --platform linux/amd64 -t sieteunoseis/$npm_package_name:$npm_package_version -t sieteunoseis/$npm_package_name:latest .",
-    "docker:push": "docker push sieteunoseis/$npm_package_name:$npm_package_version && docker push sieteunoseis/$npm_package_name:latest",
-    "docker:run": "docker run -d --name $npm_package_name --restart=always --env-file=.env sieteunoseis/$npm_package_name:$npm_package_version",
+    "start": "pm2 start ecosystem.config.js",
+    "counter": "NODE_ENV=development node perfmonCollectCounterData.js",
+    "session": "NODE_ENV=development node perfmoncollectSessionData.js",
+    "docker:build": "docker build --platform linux/amd64 -t $npm_config_init_author_name/$npm_package_name:$npm_package_version -t $npm_config_init_author_name/$npm_package_name:latest .",
+    "docker:push": "docker push $npm_config_init_author_name/$npm_package_name:$npm_package_version && docker push $npm_config_init_author_name/$npm_package_name:latest",
+    "docker:run": "docker run -d --name $npm_package_name --restart=always --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
     "docker:remove": "docker stop $npm_package_name && docker rm $npm_package_name",
     "docker:prune": "docker system prune -a"
   },
@@ -16,6 +19,7 @@
     "cisco-axl": "*",
     "cisco-perfmon": "*",
     "dotenv": "*",
+    "log-timestamp": "^0.3.0",
     "set-interval-async": "^3.0.2"
   }
 }
