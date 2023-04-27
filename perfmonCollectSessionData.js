@@ -2,42 +2,75 @@ const axlService = require("cisco-axl");
 const perfMonService = require("cisco-perfmon");
 const { setIntervalAsync } = require("set-interval-async");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
-require('log-timestamp');
+const { cleanEnv, str, host, num } = require("envalid");
+
+// If not production load the local env file
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+} else if (process.env.NODE_ENV === "test") {
+  require("dotenv").config({ path: `${__dirname}/test.env` });
+}
+
+console.log(process.env.NODE_ENV);
+
+const env = cleanEnv(process.env, {
+  NODE_ENV: str({
+    choices: ["development", "test", "production", "staging"],
+    desc: "Node environment",
+  }),
+  CUCM_HOSTNAME: host({ desc: "Cisco CUCM Hostname or IP Address." }),
+  CUCM_USERNAME: str({ desc: "Cisco CUCM AXL Username." }),
+  CUCM_PASSWORD: str({ desc: "Cisco CUCM AXL Password." }),
+  CUCM_VERSION: num({ desc: "Cisco CUCM Version." }),
+  COOLDOWN_TIMER: num({
+    default: 5000,
+    desc: "Cool down timer. Time between collecting data for each object.",
+  }),
+  SESSION_INTERVAL: num({
+    default: 5000,
+    desc: "Interval timer. Time between starting new collection period.",
+  }),
+  INFLUXDB_TOKEN: str({ desc: "InfluxDB API token." }),
+  INFLUXDB_ORG: str({ desc: "InfluxDB organization id." }),
+  INFLUXDB_BUCKET: str({ desc: "InfluxDB bucket to save data to." }),
+  INFLUXDB_URL: str({ desc: "URL of InfluxDB. i.e. http://hostname:8086." }),
+  PERFMON_SESSIONS: str({
+    desc: "Comma separated string of what counters to query.",
+  }),
+});
+
+// Add timestamp to console logs, after this point
+require("log-timestamp");
 
 // Cool down function
 const sleep = (waitTimeInMs) =>
   new Promise((resolve) => setTimeout(resolve, waitTimeInMs));
 
-// If not production load the local env file
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
-
 // If there are no counters skip polling
-if (process.env.PERFMON_SESSIONS) {
+if (env.PERFMON_SESSIONS) {
   // InfluxDB setup
-  const token = process.env.INFLUXDB_TOKEN;
-  const org = process.env.INFLUXDB_ORG;
-  const bucket = process.env.INFLUXDB_BUCKET;
+  const token = env.INFLUXDB_TOKEN;
+  const org = env.INFLUXDB_ORG;
+  const bucket = env.INFLUXDB_BUCKET;
   const client = new InfluxDB({
-    url: process.env.INFLUXDB_URL,
+    url: env.INFLUXDB_URL,
     token: token,
   });
 
   // Timer and interval setup
-  const timer = process.env.COOLDOWN_TIMER || 3000; // Timer in milliseconds
-  const interval = process.env.SESSION_INTERVAL || 30000; // Interval in milliseconds
+  const timer = env.COOLDOWN_TIMER;
+  const interval = env.SESSION_INTERVAL;
 
   // CUCM settings
   var settings = {
-    version: process.env.CUCM_VERSION,
-    cucmip: process.env.CUCM_HOSTNAME,
-    cucmuser: process.env.CUCM_USERNAME,
-    cucmpass: process.env.CUCM_PASSWORD,
+    version: env.CUCM_VERSION,
+    cucmip: env.CUCM_HOSTNAME,
+    cucmuser: env.CUCM_USERNAME,
+    cucmpass: env.CUCM_PASSWORD,
   };
 
   // Perfmon object array
-  const perfmonObjectArr = process.env.PERFMON_SESSIONS.split(",");
+  const perfmonObjectArr = env.PERFMON_SESSIONS.split(",");
 
   //  AXL and Perfmon service setup
   var axl_service = new axlService(
@@ -77,9 +110,9 @@ if (process.env.PERFMON_SESSIONS) {
         });
 
       console.log(
-        `PERFMON SESSION DATA: Found ${servers.callManager.length} servers.`
+        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from env.CUCM_HOSTNAME.`
       );
-
+      
       // Loop thru each server and collect the counters
       for (const server of servers.callManager) {
         for (const object of perfmonObjectArr) {
@@ -94,7 +127,7 @@ if (process.env.PERFMON_SESSIONS) {
             );
 
             var counters = await perfmon_service.listCounter(server.name); // Get all the counters from the server
-            
+
             if (!Array.isArray(counters)) {
               process.exit(2);
             }
@@ -167,9 +200,9 @@ if (process.env.PERFMON_SESSIONS) {
             const delay = (ms) =>
               new Promise((resolve) => setTimeout(resolve, ms));
             console.log(
-              "PERFMON SESSION DATA: Waiting 15 seconds before collecting data"
+              "PERFMON SESSION DATA: Allowing 15 seconds to pass before collecting session data."
             );
-            await delay(15000); /// waiting 30 second.
+            await delay(15000); /// waiting 15 second.
 
             let results = await perfmon_service
               .collectSessionData(SessionID)

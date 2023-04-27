@@ -1,43 +1,75 @@
 const axlService = require("cisco-axl");
 const perfMonService = require("cisco-perfmon");
 const { setIntervalAsync } = require("set-interval-async");
-const {
-  InfluxDB,
-  Point
-} = require("@influxdata/influxdb-client");
-require('log-timestamp');
+const { InfluxDB, Point } = require("@influxdata/influxdb-client");
+const { cleanEnv, str, host, num } = require("envalid");
+
+// If not production load the local env file
+if (process.env.NODE_ENV === "production") {
+  require("dotenv").config();
+}else if(process.env.NODE_ENV === "development"){
+  require('dotenv').config({ path: `${__dirname}/env/development.env` })
+}else if(process.env.NODE_ENV === "test"){
+  require('dotenv').config({ path: `${__dirname}/env/test.env` })
+}else if(process.env.NODE_ENV === "staging"){
+  require('dotenv').config({ path: `${__dirname}/env/staging.env` })
+}
+
+const env = cleanEnv(process.env, {
+  NODE_ENV: str({
+    choices: ["development", "test", "production", "staging"],
+    desc: "Node environment",
+  }),
+  CUCM_HOSTNAME: host({ desc: "Cisco CUCM Hostname or IP Address." }),
+  CUCM_USERNAME: str({ desc: "Cisco CUCM AXL Username." }),
+  CUCM_PASSWORD: str({ desc: "Cisco CUCM AXL Password." }),
+  CUCM_VERSION: num({ desc: "Cisco CUCM Version." }),
+  COOLDOWN_TIMER: num({
+    default: 5000,
+    desc: "Cool down timer. Time between collecting data for each object.",
+  }),
+  COUNTER_INTERVAL: num({
+    default: 5000,
+    desc: "Interval timer. Time between starting new collection period.",
+  }),
+  INFLUXDB_TOKEN: str({ desc: "InfluxDB API token." }),
+  INFLUXDB_ORG: str({ desc: "InfluxDB organization id." }),
+  INFLUXDB_BUCKET: str({ desc: "InfluxDB bucket to save data to." }),
+  INFLUXDB_URL: str({ desc: "URL of InfluxDB. i.e. http://hostname:8086." }),
+  PERFMON_COUNTERS: str({
+    desc: "Comma separated string of what counters to query.",
+  }),
+});
+
+// Add timestamp to console logs, after this point
+require("log-timestamp");
 
 // Cool down function
 const sleep = (waitTimeInMs) =>
   new Promise((resolve) => setTimeout(resolve, waitTimeInMs));
 
-// If not production load the local env file
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
-
 // If there are no counters skip polling
-if (process.env.PERFMON_COUNTERS) {
+if (env.PERFMON_COUNTERS) {
   try {
-    const token = process.env.INFLUXDB_TOKEN;
-    const org = process.env.INFLUXDB_ORG;
-    const bucket = process.env.INFLUXDB_BUCKET;
+    const token = env.INFLUXDB_TOKEN;
+    const org = env.INFLUXDB_ORG;
+    const bucket = env.INFLUXDB_BUCKET;
     const client = new InfluxDB({
-      url: process.env.INFLUXDB_URL,
+      url: env.INFLUXDB_URL,
       token: token,
     });
 
-    const timer = process.env.COOLDOWN_TIMER || 3000; // Timer in milliseconds
-    const interval = process.env.COUNTER_INTERVAL || 30000; // Interval in milliseconds
+    const timer = env.COOLDOWN_TIMER;
+    const interval = env.COUNTER_INTERVAL;
 
     var settings = {
-      version: process.env.CUCM_VERSION,
-      cucmip: process.env.CUCM_HOSTNAME,
-      cucmuser: process.env.CUCM_USERNAME,
-      cucmpass: process.env.CUCM_PASSWORD,
+      version: env.CUCM_VERSION,
+      cucmip: env.CUCM_HOSTNAME,
+      cucmuser: env.CUCM_USERNAME,
+      cucmpass: env.CUCM_PASSWORD,
     };
 
-    const perfmonObjectArr = process.env.PERFMON_COUNTERS.split(",");
+    const perfmonObjectArr = env.PERFMON_COUNTERS.split(",");
 
     var axl_service = new axlService(
       settings.cucmip,
@@ -73,7 +105,9 @@ if (process.env.PERFMON_COUNTERS) {
           console.log(error);
         });
 
-      console.log(`PERFMON COUNTER DATA: Found ${servers.callManager.length} servers.`);
+      console.log(
+        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from env.CUCM_HOSTNAME.`
+      );
 
       for (const server of servers.callManager) {
         for (const object of perfmonObjectArr) {
