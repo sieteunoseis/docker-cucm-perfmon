@@ -5,14 +5,12 @@ const { InfluxDB, Point } = require("@influxdata/influxdb-client");
 const { cleanEnv, str, host, num } = require("envalid");
 
 // If not production load the local env file
-if (process.env.NODE_ENV === "production") {
-  require("dotenv").config();
-}else if(process.env.NODE_ENV === "development"){
-  require('dotenv').config({ path: `${__dirname}/env/development.env` })
-}else if(process.env.NODE_ENV === "test"){
-  require('dotenv').config({ path: `${__dirname}/env/test.env` })
-}else if(process.env.NODE_ENV === "staging"){
-  require('dotenv').config({ path: `${__dirname}/env/staging.env` })
+if (process.env.NODE_ENV === "development") {
+  require("dotenv").config({ path: `${__dirname}/env/development.env` });
+} else if (process.env.NODE_ENV === "test") {
+  require("dotenv").config({ path: `${__dirname}/env/test.env` });
+} else if (process.env.NODE_ENV === "staging") {
+  require("dotenv").config({ path: `${__dirname}/env/staging.env` });
 }
 
 const env = cleanEnv(process.env, {
@@ -23,7 +21,7 @@ const env = cleanEnv(process.env, {
   CUCM_HOSTNAME: host({ desc: "Cisco CUCM Hostname or IP Address." }),
   CUCM_USERNAME: str({ desc: "Cisco CUCM AXL Username." }),
   CUCM_PASSWORD: str({ desc: "Cisco CUCM AXL Password." }),
-  CUCM_VERSION: str({ desc: "Cisco CUCM Version." }),
+  CUCM_VERSION: str({ desc: "Cisco CUCM Version. i.e. 12.5, or 14.0." }),
   COOLDOWN_TIMER: num({
     default: 5000,
     desc: "Cool down timer. Time between collecting data for each object.",
