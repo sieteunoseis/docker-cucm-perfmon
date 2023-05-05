@@ -1,7 +1,7 @@
 {
   "name": "docker-cucm-perfmon",
   "description": "Docker container to collect Cisco Perfmon stats and upload to InfluxDB.",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "author": "sieteunoseis",
   "private": true,
   "scripts": {
