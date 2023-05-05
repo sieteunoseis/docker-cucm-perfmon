@@ -23,7 +23,7 @@ const env = cleanEnv(process.env, {
   CUCM_HOSTNAME: host({ desc: "Cisco CUCM Hostname or IP Address." }),
   CUCM_USERNAME: str({ desc: "Cisco CUCM AXL Username." }),
   CUCM_PASSWORD: str({ desc: "Cisco CUCM AXL Password." }),
-  CUCM_VERSION: num({ desc: "Cisco CUCM Version." }),
+  CUCM_VERSION: str({ desc: "Cisco CUCM Version." }),
   COOLDOWN_TIMER: num({
     default: 5000,
     desc: "Cool down timer. Time between collecting data for each object.",
@@ -106,7 +106,7 @@ if (env.PERFMON_COUNTERS) {
         });
 
       console.log(
-        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from env.CUCM_HOSTNAME.`
+        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from ${env.CUCM_HOSTNAME}.`
       );
 
       for (const server of servers.callManager) {

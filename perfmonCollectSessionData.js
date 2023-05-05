@@ -110,7 +110,7 @@ if (env.PERFMON_SESSIONS) {
         });
 
       console.log(
-        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from env.CUCM_HOSTNAME.`
+        `PERFMON COUNTER DATA: Found ${servers.callManager.length} servers from ${env.CUCM_HOSTNAME}.`
       );
       
       // Loop thru each server and collect the counters
