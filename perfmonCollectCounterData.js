@@ -2,7 +2,7 @@ const axlService = require("cisco-axl");
 const perfMonService = require("cisco-perfmon");
 const { setIntervalAsync } = require("set-interval-async");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
-const { cleanEnv, str, host, num } = require("envalid");
+const { makeValidator, cleanEnv, str, host, num } = require("envalid");
 
 // If not production load the local env file
 if (process.env.NODE_ENV === "development") {
