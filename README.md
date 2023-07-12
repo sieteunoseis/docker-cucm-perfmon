@@ -43,6 +43,14 @@ To view Docker enviromental variables within container run:
 env
 ```
 
+If you get a certificate error you can try adding the following to your .env file:
+
+```node
+NODE_OPTIONS=--experimental-vm-modules
+NODE_NO_WARNINGS=1
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
 ## Running Docker
 
 - Create folder directory /docker/perfmon
@@ -54,10 +62,12 @@ env
 Docker Compose file:
 
 ```docker
-perfmon:
-  image: sieteunoseis/docker-cucm-perfmon:latest
-  env_file:
-    - .env
+version: '3'
+services:
+  perfmon:
+    image: sieteunoseis/docker-cucm-perfmon:latest
+    env_file:
+      - .env
 ```
 
 ## Giving Back
