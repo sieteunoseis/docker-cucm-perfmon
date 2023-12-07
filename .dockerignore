@@ -1,0 +1,9 @@
+# Environment variables and folders
+env
+*.env
+
+# Standard Docker ignore patterns
+.dockerignore
+.dockerignore.example
+.dockerignore.sample
+.dockerignore.template
