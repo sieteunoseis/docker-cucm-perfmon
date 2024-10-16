@@ -131,7 +131,7 @@ if (env.PERFMON_SESSIONS) {
               } seconds.`
             );
 
-            var counters = await perfmon_service.listCounter(server.name); // Get all the counters from the server
+            var counters = await perfmon_service.listCounter(server.processNodeName.value); // Get all the counters from the server
 
             if (!Array.isArray(counters)) {
               process.exit(2);

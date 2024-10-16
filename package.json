@@ -1,7 +1,7 @@
 {
   "name": "docker-cucm-perfmon",
   "description": "Docker container to collect Cisco Perfmon stats and upload to InfluxDB.",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "author": "sieteunoseis",
   "private": true,
   "scripts": {
@@ -15,11 +15,11 @@
     "docker:prune": "docker system prune -a"
   },
   "dependencies": {
-    "@influxdata/influxdb-client": "*",
+    "@influxdata/influxdb-client": "^1.35.0",
     "cisco-axl": "*",
     "cisco-perfmon": "*",
     "dotenv": "*",
-    "envalid": "^7.3.1",
+    "envalid": "*",
     "log-timestamp": "^0.3.0",
     "set-interval-async": "^3.0.2"
   }

@@ -122,8 +122,9 @@ if (env.PERFMON_COUNTERS) {
                 timer / 1000
               } seconds.`
             );
+
             var perfmonOutput = await perfmon_service
-              .collectCounterData(server.name, object)
+              .collectCounterData(server.processNodeName.value, object) // Updated to use hardcoded processNodeName vs user defined name
               .catch((error) => {
                 console.log("Error", error);
               });
