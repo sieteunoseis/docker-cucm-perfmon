@@ -14,4 +14,4 @@ RUN npm install
 COPY . .
 
 # Start PM2 Process
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD [ "pm2-runtime", "start", "ecosystem.config.js", "--env=production"]

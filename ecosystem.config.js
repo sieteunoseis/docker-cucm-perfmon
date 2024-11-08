@@ -1,16 +1,22 @@
 module.exports = [
   {
     script: "perfmonCollectCounterData.js",
-    name: "Collect Counter Data",
-    watch: true,
+    name: "Counter Data",
     autorestart: true,
-    exp_backoff_restart_delay: 360000
+    exp_backoff_restart_delay: 60000,
+    stop_exit_codes: [1],
+    env: {
+      NODE_ENV: "development"
+    }
   },
   {
     script: "perfmonCollectSessionData.js",
-    name: "Collect Session Data",
-    watch: true,
+    name: "Session Data",
     autorestart: true,
-    exp_backoff_restart_delay: 360000
+    exp_backoff_restart_delay: 60000,
+    stop_exit_codes: [1],
+    env: {
+      NODE_ENV: "development"
+    }
   }
 ];

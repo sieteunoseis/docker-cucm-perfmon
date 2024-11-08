@@ -12,23 +12,39 @@ npm run docker:run
 ## Needed Enviromental Variables
 
 ```node
-NODE_ENV=production
-PM2_PUBLIC_KEY=
-PM2_SECRET_KEY=
-CUCM_VERSION=<INSERT VERSION I.E. 12.5>
+# Nodejs Settings - Comment out if you get certificate errors
+# NODE_OPTIONS=--experimental-vm-modules
+# NODE_NO_WARNINGS=1
+# NODE_TLS_REJECT_UNAUTHORIZED=0
+
+# PM2 Settings - Comment out if not using pm2.io
+# PM2_PUBLIC_KEY=
+# PM2_SECRET_KEY=
+
+# AXL Settings
 CUCM_HOSTNAME=<INSERT IP ADDRESS>
 CUCM_USERNAME=<INSERT USERNAME>
 CUCM_PASSWORD=<INSERT PASSWORD>
-CUCM_VERSION=14.0
-COOLDOWN_TIMER=3000
-SESSION_INTERVAL=1000
-COUNTER_INTERVAL=5000
+CUCM_VERSION=<INSERT VERSION I.E. 12.5>
+
+# InfluxDB Settings
 INFLUXDB_TOKEN=<INSERT INFLUXDB TOKEN>
 INFLUXDB_ORG=<INSERT INFLUXDB ORG>
-INFLUXDB_BUCKET=cisco_cucm
+INFLUXDB_BUCKET=<INSERT INFLUXDB BUCKET>
 INFLUXDB_URL=<INSERT INFLUXDB URL>
-PERFMON_COUNTERS=Cisco CAR DB,Cisco CallManager,Cisco Phones,Cisco Lines,Cisco H323,Cisco MGCP Gateways,Cisco MOH Device,Cisco Analog Access,Cisco MGCP FXS Device,Cisco MGCP FXO Device,Cisco MGCP T1CAS Device,Cisco MGCP PRI Device,Cisco MGCP BRI Device,Cisco MTP Device,Cisco Transcode Device,Cisco SW Conference Bridge Device,Cisco HW Conference Bridge Device,Cisco Locations RSVP,Cisco Gatekeeper,Cisco CallManager System Performance,Cisco Video Conference Bridge Device,Cisco Hunt Lists,Cisco SIP,Cisco Annunciator Device,Cisco QSIG Features,Cisco SIP Stack,Cisco Presence Features,Cisco WSMConnector,Cisco Dual-Mode Mobility,Cisco SIP Station,Cisco Mobility Manager,Cisco Signaling,Cisco Call Restriction,External Call Control,Cisco SAF Client,IME Client,IME Client Instance,Cisco SIP Normalization,Cisco Telepresence MCU Conference Bridge Device,Cisco SIP Line Normalization,Cisco Hunt Pilots,Cisco Video On Hold Device,Cisco Recording,Cisco IVR Device,Cisco AXL Tomcat Connector,Cisco AXL Tomcat Web Application,Cisco AXL Tomcat JVM,Cisco LDAP Directory,Cisco Media Streaming App,Cisco SSOSP Tomcat Connector,Cisco SSOSP Tomcat Web Application,Cisco SSOSP Tomcat JVM,Cisco TFTP,Cisco Tomcat Connector,Cisco Tomcat Web Application,Cisco Tomcat JVM,Cisco UDS Tomcat Connector,Cisco UDS Tomcat Web Application,Cisco UDS Tomcat JVM,Cisco AXL Web Service,Cisco Device Activation,Cisco Extension Mobility,Cisco IP Manager Assistant,Cisco WebDialer,Cisco CTI Manager,Cisco CTI Proxy,DB Local_DSN,DB Change Notification Server,DB Change Notification Client,DB Change Notification Subscriptions,Enterprise Replication Perfmon Counters,Enterprise Replication DBSpace Monitors,Number of Replicates Created and State of Replication,DB User Host Information Counters,Cisco Locations LBM,Cisco LBM Service,Process,Partition,Memory,Thread,IP,TCP,Network Interface,System,IP6,Ramfs,Cisco HAProxy,Docker Container,SAML SSO
-PERFMON_SESSIONS=Memory,Processor,Docker Container,Process,Partition,Thread
+
+# Perfmon Settings
+# PERFMON_SERVERS={ "servers": ["cucm02-sub.automate.builders"]} - Remove comment if you'd only like to run on a single server or set of servers
+PERFMON_COUNTERS=Cisco Annunciator Device,Cisco AXL Web Service,Cisco Call Restriction,Cisco CallManager,Cisco CallManager System Performance,Cisco CAR DB,Cisco CTI Manager,Cisco Device Activation,Cisco Dual-Mode Mobility,Cisco Extension Mobility,Cisco Hunt Lists,Cisco IP Manager Assistant,Cisco IVR Device,Cisco LBM Service,Cisco LDAP Directory,Cisco Locations RSVP,Cisco Media Streaming App,Cisco Mobility Manager,Cisco MOH Device,Cisco MTP Device,Cisco Presence Features,Cisco QSIG Features,Cisco Recording,Cisco SAF Client,Cisco Signaling,Cisco SIP,Cisco SIP Normalization,Cisco SIP Stack,Cisco SIP Station,Cisco SW Conference Bridge Device,Cisco TFTP,Cisco Tomcat Connector,Cisco Tomcat JVM,Cisco Tomcat Web Application,Cisco WebDialer,DB Local_DSN,DB User Host Information Counters,Enterprise Replication DBSpace Monitors,IP,IP6,Memory,Network Interface,Number of Replicates Created and State of Replication,Partition,Ramfs,SAML SSO,System,TCP,Thread
+PERFMON_SESSIONS=Memory,Processor,Process,Partition,Thread
+PERFMON_RETRIES=10
+PERFMON_RETRY_DELAY=20000
+PERFMON_SERVER_CONCURRENCY=2
+PERFMON_COUNTER_CONCURRENCY=5
+PERFMON_COOLDOWN_TIMER=3000
+PERFMON_SESSION_INTERVAL=15000
+PERFMON_COUNTER_INTERVAL=15000
+PERFMON_SESSIONS_SLEEP=15000
 ```
 
 Save to .env file within project. 
@@ -68,6 +84,33 @@ services:
     image: sieteunoseis/docker-cucm-perfmon:latest
     env_file:
       - .env
+```
+
+## Troubleshooting
+
+Verifing data
+
+show perf query counter "Cisco CallManager" "CallsActive"
+
+Rate Limiting
+
+Increase the limit to 18 under the CUCM Enterprise Parameters for Rate Control → Allowed Device Queries Per Minute web interface.
+
+Number of Nodes in the Cluster
+
+In large cluster, configure your application to point SOAP clients to individual servers that have server
+specific Perfmon counters.
+  
+```linux
+
+file list activelog /tomcat/logs/soap/csv/ratecontrol*.csv page detail date reverse
+file view activelog /tomcat/logs/soap/csv/ratecontrol*.csv
+
+file list activelog /tomcat/logs/soap/csv/axis2ratecontrol*.csv page detail date reverse
+file view activelog /tomcat/logs/soap/csv/axis2ratecontrol*.csv
+
+file list activelog /tomcat/logs/soap/log4j/soap*.log page detail date reverse
+file view activelog /tomcat/logs/soap/log4j/soap*.log
 ```
 
 ## Giving Back
