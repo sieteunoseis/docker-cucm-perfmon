@@ -24,3 +24,4 @@ bower_components
 *.env
 env
 env.example
+/env
