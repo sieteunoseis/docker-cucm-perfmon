@@ -1,8 +1,13 @@
 # Perfmon Influx Exporter
 
-NodeJS application using Cisco Perfmon API to export data to InfluxDB.
+NodeJS application using Cisco Perfmon API to export data to InfluxDB. There are 3 ways this application will collect data from CUCM to export to InfluxDB.
+1. Collect objects for a specific server(s) based on a configuration file provided to application. File example is provided in the repo in the **data** folder. To use you must rename to **config.json** and make sure your volume is mapped correctly in the docker-compose.yml file. If no config.json file is present the application will move on to the next method. See below for more information.
+2. Collect all objects for a specific server(s) in a single request. This is done via the enviromental variable PM_OBJECT_COLLECT_ALL. This method has the greatest risk of being rate limited by CUCM API. To limit the risk of being rate limited, you can increase the PM_OBJECT_COLLECT_ALL_CONCURRENCY enviromental variable to regulate the number of objects collected at once. Other methods would be to use the PM_SERVERS enviromental variable to limit the servers being polled, or separate the objects into multiple requests based on different PM_INVERVAL. For example you could collect some objects every 15 seconds and other objects every 60 seconds.
+3. Collect all objects for a specific server(s) in a session based request that return percentage values. This is done via the enviromental variable PM_OBJECT_SESSION_PERCENTANGE and PM_OBJECT_SESSION_PERCENTAGE_SLEEP. Note this also has the risk of being rate limited by CUCM API, however the risk is lower than the PM_OBJECT_COLLECT_ALL method.
 
-## Install
+Application will attempt to collect data in the order listed above. If any method is missing, it will move to the next method.
+
+## Installation
 
 ```node
 npm run docker:build
@@ -12,7 +17,7 @@ npm run docker:run
 ## Needed Enviromental Variables
 
 ```node
-# Nodejs Settings - Comment out if you get certificate errors
+# Node.JS Settings - Comment out if you get certificate errors
 # NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # PM2 Settings - Comment out if not using pm2.io
@@ -48,33 +53,35 @@ PM_OBJECT_SESSION_PERCENTANGE_SLEEP=15000
 
 Save to .env file within project. 
 
-DO NOT USE QUOTES OR DOUBLE QUOTES IN ENV FILE, THEY ARE NOT SUPPORTED.
+**DO NOT USE QUOTES OR DOUBLE QUOTES IN ENV FILE, THEY ARE NOT SUPPORTED.**
 
 https://docs.docker.com/compose/environment-variables/env-file/#syntax-rules
 
-To view Docker enviromental variables within container run:
-
-```linux
-env
-```
-
-If you get a certificate error you can try adding the following to your .env file:
-
-```node
-NODE_OPTIONS=--experimental-vm-modules
-NODE_NO_WARNINGS=1
-NODE_TLS_REJECT_UNAUTHORIZED=0
-```
 
 ## Running via Docker
 
-- Create folder directory /docker/perfmon
+- Create folder directory. Example: 
+```linux
+mkdir /docker/perfmon
+```
 - cd to new folder
-- Create docker-compose.yml > touch docker-compose.yml
-- Create .env from above > touch .env
-- Run > docker-compose up -d
+```
+cd /docker/perfmon
+```
+- Create docker-compose.yml > touch docker-compose.yml. Example provided in repo.
+```
+touch docker-compose.yml
+``` 
+- Create .env from above > touch .env. Example provided in repo.
+```
+touch .env
+```
+- Run > docker compose up -d
+```
+docker compose up -d
+```
 
-Docker Compose file:
+#### Docker Compose file:
 
 ```docker
 services:
@@ -85,6 +92,19 @@ services:
     volumes:
       - ./data:/usr/src/app
 ```
+
+#### Generating config.json file
+
+Docker container has the ability to generate a config.json file for you. This is useful if you are unsure of the objects you'd like to collect. Creating a config.json file also decreases the amount of data being collected from CUCM, which can help with rate limiting.
+
+Using Docker to generate the config.json file:
+
+```linux
+docker run -d -v $(pwd)/data:/usr/src/app/data --env-file=.env sieteunoseis/perfmon-influx-exporter:latest config hq-cucm-pub.abc.inc "Cisco CallManager,Processor,Memory"
+```
+
+This will generate a config.json file in the data folder. You can then modify the file to include the objects you'd like to collect.
+
 ## Environment Variables
 
 | Variable                            | Default    | Description                                                                                                                                                                                                                                                                                                                                                  |
@@ -137,7 +157,7 @@ Suggest increasing the limit to 18 under the CUCM Enterprise Parameters for Rate
 
 ##### Number of Nodes in the Cluster
 
-In large cluster, configure your application to point SOAP clients to individual servers that have server specific Perfmon counters. This can be done via the PM_SERVERS enviromental variable.
+In large cluster, configure your application to point SOAP clients to individual servers that have server specific Perfmon counters. This can be done via the **PM_SERVERS** enviromental variable.
   
 ##### Debugging CUCM Log files
 
@@ -153,6 +173,13 @@ file view activelog /tomcat/logs/soap/csv/axis2ratecontrol*.csv
 
 file list activelog /tomcat/logs/soap/log4j/soap*.log page detail date reverse
 file view activelog /tomcat/logs/soap/log4j/soap*.log
+```
+
+If you get a certificate error(s) you can try adding the following to your .env file:
+
+```node
+NODE_NO_WARNINGS=1
+NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
 
 ## Giving Back
