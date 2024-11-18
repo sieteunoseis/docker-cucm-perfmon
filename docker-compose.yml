@@ -1,6 +1,7 @@
-version: '3'
 services:
   perfmon:
-    image: sieteunoseis/docker-cucm-perfmon:latest
+    image: sieteunoseis/perfmon-influx-exporter:latest
+    command:
+      - start
     env_file:
       - .env

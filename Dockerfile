@@ -13,5 +13,6 @@ RUN npm install
 # Bundle app source
 COPY . .
 
-# Start PM2 Process
-CMD [ "pm2-runtime", "start", "ecosystem.config.js", "--env=production"]
+# Start PM2 Process via entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,16 +1,16 @@
 {
-  "name": "docker-cucm-perfmon",
-  "description": "Docker container to collect Cisco Perfmon stats and upload to InfluxDB.",
-  "version": "3.0.0",
+  "name": "perfmon-influx-exporter",
+  "description": "Docker container to collect Cisco Perfmon stats and export to InfluxDB.",
+  "version": "3.0.2",
   "author": "sieteunoseis",
   "private": true,
   "scripts": {
     "start": "pm2 start ecosystem.config.js",
-    "counter": "NODE_ENV=development node perfmonCollectCounterData.js",
-    "session": "NODE_ENV=development node perfmoncollectSessionData.js",
+    "development": "NODE_ENV=development node --trace-warnings main.js",
+    "staging": "NODE_ENV=staging node main.js",
     "docker:build": "docker build --platform linux/amd64 -t $npm_config_init_author_name/$npm_package_name:$npm_package_version -t $npm_config_init_author_name/$npm_package_name:latest .",
     "docker:push": "docker push $npm_config_init_author_name/$npm_package_name:$npm_package_version && docker push $npm_config_init_author_name/$npm_package_name:latest",
-    "docker:run": "docker run -d --name $npm_package_name --restart=always --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
+    "docker:run": "docker run -d --name $npm_package_name --restart=always -v $(pwd)/data:/data --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
     "docker:remove": "docker stop $npm_package_name && docker rm $npm_package_name",
     "docker:prune": "docker system prune -a"
   },
@@ -18,10 +18,12 @@
     "@influxdata/influxdb-client": "^1.35.0",
     "cisco-axl": "*",
     "cisco-perfmon": "*",
+    "commander": "^12.1.0",
     "dotenv": "*",
     "envalid": "*",
     "log-timestamp": "^0.3.0",
     "p-limit": "^3.1.0",
-    "set-interval-async": "^3.0.2"
+    "set-interval-async": "^3.0.2",
+    "validator": "^13.12.0"
   }
 }
