@@ -328,34 +328,26 @@ const collectSessionData = async (servers, logPrefix) => {
                   }
                 })
                 .catch((error) => {
-                  if (error.message.faultcode) {
-                    jsonResults.results.push(`listInstance Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-                    if (error.message.faultcode === "RateControl") {
-                      rateControl = true;
-                    }
-                    resolve(jsonResults);
-                  } else if (error.message == 503) {
-                    jsonResults.results.push(`Error: Received ${error.message} for listInstance. Application can only retry on SSO authentication.`);
+                  let functionName = "listInstance"
+                  if (error.status >= 500) {
+                    rateControl = true;
+                    jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
                     resolve();
                   } else {
-                    console.error("listInstance Error:", error);
+                    console.error("${functionName} Error:", error);
                     process.exit(0);
                   }
                 });
             }
           })
           .catch((error) => {
-            if (error.message.faultcode) {
-              jsonResults.results.push(`listCounter Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-              if (error.message.faultcode === "RateControl") {
-                rateControl = true;
-              }
-              resolve(jsonResults);
-            } else if (error.message == 503) {
-              jsonResults.results.push(`Error: Received ${error.message} for listCounter. Application can only retry on SSO authentication.`);
+            let functionName = "listCounter"
+            if (error.status >= 500) {
+              rateControl = true;
+              jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
               resolve();
             } else {
-              console.error("listCounter Error:", error);
+              console.error("${functionName} Error:", error);
               process.exit(0);
             }
           });
@@ -372,14 +364,9 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`openSession Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for openSession. Application can only retry on SSO authentication.`);
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`openSession Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
             console.error("openSession Error:", error);
@@ -397,14 +384,9 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`addCounter Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for addCounter. Application can only retry on SSO authentication.`);
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`addCounter Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
             console.error("addCounter Error:", error);
@@ -422,17 +404,13 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`collectSessionData Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for collectSessionData. Application can only retry on SSO authentication.`);
+          let functionName = "collectSessionData"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("collectSessionData Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -456,17 +434,13 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`collectSessionData Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for collectSessionData. Application can only retry on SSO authentication.`);
+          let functionName = "collectSessionData"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("collectSessionData Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -481,17 +455,13 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`removeCounter Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for removeCounter. Application can only retry on SSO authentication.`);
+          let functionName = "removeCounter"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("removeCounter Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -512,17 +482,13 @@ const collectSessionData = async (servers, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`closeSession Error: ${error.message.faultcode} for ${jsonResults.server}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for closeSession. Application can only retry on SSO authentication.`);
+          let functionName = "closeSession"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("closeSession Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -603,17 +569,13 @@ const collectSessionConfig = async (data, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`openSession Error: ${error.message.faultcode} for ${env.CUCM_HOSTNAME}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for openSession. Application can only retry on SSO authentication.`);
+          let functionName = "openSession"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("openSession Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -628,17 +590,13 @@ const collectSessionConfig = async (data, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`addCounter Error: ${error.message.faultcode} for ${env.CUCM_HOSTNAME}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for addCounter. Application can only retry on SSO authentication.`);
+          let functionName = "addCounter"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("addCounter Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -657,17 +615,13 @@ const collectSessionConfig = async (data, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`collectSessionData Error: ${error.message.faultcode} for ${env.CUCM_HOSTNAME}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for collectSessionData. Application can only retry on SSO authentication.`);
+          let functionName = "collectSessionData"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("collectSessionData Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -682,17 +636,13 @@ const collectSessionConfig = async (data, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`removeCounter Error: ${error.message.faultcode} for ${env.CUCM_HOSTNAME}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for removeCounter. Application can only retry on SSO authentication.`);
+          let functionName = "removeCounter"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("removeCounter Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
@@ -713,17 +663,13 @@ const collectSessionConfig = async (data, logPrefix) => {
             process.exit(0);
           }
         } catch (error) {
-          if (error.message.faultcode) {
-            jsonResults.results.push(`closeSession Error: ${error.message.faultcode} for ${env.CUCM_HOSTNAME}.`);
-            if (error.message.faultcode === "RateControl") {
-              rateControl = true;
-            }
-            resolve(jsonResults);
-          } else if (error.message == 503) {
-            jsonResults.results.push(`Error: Received ${error.message} for closeSession. Application can only retry on SSO authentication.`);
+          let functionName = "closeSession"
+          if (error.status >= 500) {
+            rateControl = true;
+            jsonResults.results.push(`${functionName} Error: ${error.message} for ${jsonResults.server}.`);
             resolve();
           } else {
-            console.error("closeSession Error:", error);
+            console.error("${functionName} Error:", error);
             process.exit(0);
           }
         }
