@@ -63,11 +63,11 @@ module.exports = {
       default: 5000,
       desc: "Interval timer. Time between starting new collection period.",
     }),
-    PM_OBJECT_SESSION_PERCENTANGE: str({
+    PM_OBJECT_SESSION_PERCENTAGE: str({
       default: null,
       desc: "Comma separated string of what counters to query. These are percentage counters that two or more samples to collect data.",
     }),
-    PM_OBJECT_SESSION_PERCENTANGE_SLEEP: num({
+    PM_OBJECT_SESSION_PERCENTAGE_SLEEP: num({
       default: 15000,
       desc: "How long to sleep between adding objects to a session and collecting data. This is for percentage counters that need time to collect data.",
     }),

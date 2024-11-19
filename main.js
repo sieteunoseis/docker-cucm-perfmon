@@ -255,7 +255,7 @@ const collectCounterData = async (servers, logPrefix) => {
 
 const collectSessionData = async (servers, logPrefix) => {
   return new Promise(async (resolve, reject) => {
-    const perfmonSessionArr = env.PM_OBJECT_SESSION_PERCENTANGE.split(",");
+    const perfmonSessionArr = env.PM_OBJECT_SESSION_PERCENTAGE.split(",");
     const writeApi = client.getWriteApi(org, bucket);
     console.log(`${logPrefix}: Found ${servers.callManager.length} server(s) in the cluster. Starting collection for each server, up to ${env.PM_SERVER_CONCURRENCY} at a time, if applicable.`);
     let points = [];
@@ -416,7 +416,7 @@ const collectSessionData = async (servers, logPrefix) => {
         }
 
         const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-        await delay(env.PM_OBJECT_SESSION_PERCENTANGE_SLEEP); // sleeping for 15 seconds to allow the server to generate the counter data
+        await delay(env.PM_OBJECT_SESSION_PERCENTAGE_SLEEP); // sleeping for 15 seconds to allow the server to generate the counter data
 
         console.log(`${logPrefix}: Waiting 15 seconds for ${jsonResults.server} to generate counter data.`);
 
@@ -428,7 +428,7 @@ const collectSessionData = async (servers, logPrefix) => {
             collectSessionResults.results.forEach(function (result) {
               points.push(new Point(result.object).tag("host", result.host).tag("cstatus", result.cstatus).tag("instance", result.instance).floatField(result.counter, result.value));
             });
-            jsonResults.results.push(`collectSessionData: Collected ${collectSessionResults.results.length} observation points for ${jsonResults.server} after sleeping for ${env.PM_OBJECT_SESSION_PERCENTANGE_SLEEP}ms.`);
+            jsonResults.results.push(`collectSessionData: Collected ${collectSessionResults.results.length} observation points for ${jsonResults.server} after sleeping for ${env.PM_OBJECT_SESSION_PERCENTAGE_SLEEP}ms.`);
           } else {
             console.log("collectSessionData Error: No results returned.");
             process.exit(0);
@@ -785,10 +785,10 @@ function validateFQDN(value) {
           console.log("PM_OBJECT_COLLECT_ALL env variable not set. Skipping collection.");
         }
 
-        if (env.PM_OBJECT_SESSION_PERCENTANGE) {
+        if (env.PM_OBJECT_SESSION_PERCENTAGE) {
           tasks.push({ fn: collectSessionData, args: [servers, "PERFMON SESSION DATA"] });
         } else {
-          console.log("PM_OBJECT_SESSION_PERCENTANGE env variable not set. Skipping collection.");
+          console.log("PM_OBJECT_SESSION_PERCENTAGE env variable not set. Skipping collection.");
         }
 
         if (tasks.length > 0) {
