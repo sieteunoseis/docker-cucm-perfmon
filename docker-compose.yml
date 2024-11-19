@@ -3,5 +3,7 @@ services:
     image: sieteunoseis/perfmon-influx-exporter:latest
     command:
       - start
+    volumes:
+      - ./data:/usr/src/app/data
     env_file:
       - .env

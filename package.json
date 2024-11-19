@@ -1,7 +1,7 @@
 {
   "name": "perfmon-influx-exporter",
   "description": "Docker container to collect Cisco Perfmon stats and export to InfluxDB.",
-  "version": "3.0.7",
+  "version": "3.0.8",
   "author": "Jeremy Worden <jeremy@automate.builders>",
   "repository": {
     "type": "git",
@@ -15,8 +15,8 @@
     "staging": "NODE_ENV=staging node main.js",
     "docker:build": "docker build --platform linux/amd64 -t $npm_config_init_author_name/$npm_package_name:$npm_package_version -t $npm_config_init_author_name/$npm_package_name:latest .",
     "docker:push": "docker push $npm_config_init_author_name/$npm_package_name:$npm_package_version && docker push $npm_config_init_author_name/$npm_package_name:latest",
-    "docker:run": "docker run -d --name $npm_package_config_docker_run_name --restart=always -v $(pwd)/data:/data --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
-    "docker:remove": "docker stop npm_package_config_docker_run_name && docker rm npm_package_config_docker_run_name",
+    "docker:run": "docker run -d --name $npm_package_config_docker_run_name --restart=always -v $(pwd)/data:/usr/src/app/data --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version start",
+    "docker:remove": "docker stop $npm_package_config_docker_run_name && docker rm $npm_package_config_docker_run_name",
     "docker:prune": "docker system prune -a"
   },
   "dependencies": {

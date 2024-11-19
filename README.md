@@ -88,10 +88,12 @@ docker compose up -d
 services:
   perfmon:
     image: sieteunoseis/perfmon-influx-exporter:latest
+    command:
+      - start
     env_file:
       - .env
     volumes:
-      - ./data:/usr/src/app
+      - ./data:/usr/src/app/data
 ```
 
 #### Generating config.json file
