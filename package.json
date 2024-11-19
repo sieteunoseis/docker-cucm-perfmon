@@ -1,17 +1,22 @@
 {
   "name": "perfmon-influx-exporter",
   "description": "Docker container to collect Cisco Perfmon stats and export to InfluxDB.",
-  "version": "3.0.5",
-  "author": "sieteunoseis",
+  "version": "3.0.6",
+  "author": "Jeremy Worden <jeremy@automate.builders>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sieteunoseis/perfmon-influx-exporter.git"
+  },
   "private": true,
   "scripts": {
     "start": "pm2 start ecosystem.config.js",
-    "development": "NODE_ENV=development node --trace-warnings main.js",
+    "development": "NODE_ENV=development node main.js",
+    "test": "NODE_ENV=test node main.js",
     "staging": "NODE_ENV=staging node main.js",
     "docker:build": "docker build --platform linux/amd64 -t $npm_config_init_author_name/$npm_package_name:$npm_package_version -t $npm_config_init_author_name/$npm_package_name:latest .",
     "docker:push": "docker push $npm_config_init_author_name/$npm_package_name:$npm_package_version && docker push $npm_config_init_author_name/$npm_package_name:latest",
-    "docker:run": "docker run -d --name $npm_package_name --restart=always -v $(pwd)/data:/data --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
-    "docker:remove": "docker stop $npm_package_name && docker rm $npm_package_name",
+    "docker:run": "docker run -d --name $npm_package_config_docker_run_name --restart=always -v $(pwd)/data:/data --env-file=.env $npm_config_init_author_name/$npm_package_name:$npm_package_version",
+    "docker:remove": "docker stop npm_package_config_docker_run_name && docker rm npm_package_config_docker_run_name",
     "docker:prune": "docker system prune -a"
   },
   "dependencies": {
@@ -23,7 +28,24 @@
     "envalid": "*",
     "log-timestamp": "^0.3.0",
     "p-limit": "^3.1.0",
-    "set-interval-async": "^3.0.2",
+    "set-interval-async": "*",
     "validator": "^13.12.0"
-  }
+  },
+  "license": "MIT",
+  "main": "main.js",
+  "config": {
+    "docker_username": "sieteunoseis",
+    "docker_platform": "linux/amd64",
+    "docker_run_name": "perfmon"
+  },
+  "keywords": [
+    "cucm",
+    "docker",
+    "cisco",
+    "perfmon"
+  ],
+  "bugs": {
+    "url": "https://github.com/sieteunoseis/perfmon-influx-exporter/issues"
+  },
+  "homepage": "https://github.com/sieteunoseis/perfmon-influx-exporter#readme"
 }
