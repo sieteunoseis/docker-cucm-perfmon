@@ -1,4 +1,4 @@
-const { makeValidator, cleanEnv, str, host, num } = require("envalid");
+const { makeValidator, cleanEnv, str, host, num, bool } = require("envalid");
 const path = require("path");
 const axlService = require("cisco-axl");
 const perfMonService = require("cisco-perfmon");
@@ -39,6 +39,7 @@ module.exports = {
       default: 1,
       desc: "How many servers to query at once. Decrease if you are getting rate limited or 503 errors.",
     }),
+    PM_RETRY_FLAG: bool({default: true, desc: "Flag to retry failed queries. Default is false."}),
     PM_RETRY: num({
       default: 3,
       desc: "How many times to retry a failed query. Default is 3.",
@@ -102,93 +103,52 @@ module.exports = {
   getSessionConfig: async (server, counterArr) => {
     const env = module.exports.getBaseEnv;
     return new Promise(async (resolve, reject) => {
-      let service = new perfMonService(server, env.CUCM_USERNAME, env.CUCM_PASSWORD);
-      let sessionArray = [];
+      let perfmon_service = new perfMonService(server, env.CUCM_USERNAME, env.CUCM_PASSWORD);
+      var objectCollectArr = [];
+      var listCounterResults;
+      var listInstanceResults;
 
       try {
-        var listCounterResults = await service.listCounter(server);
+        listCounterResults = await perfmon_service.listCounter(server, counterArr);
       } catch (error) {
-        if (error.message.faultcode) {
-          reject(`Error: ${error.message.faultcode} for ${server}.`);
-          return;
-        } else if (error.message == 503) {
-          reject(`Error: ${error.message} received for ${server}.`);
-          return;
-        } else {
-          reject(`Error: ${error} for ${server}.`);
-          return;
-        }
+        console.log(error);
+        process.exit(0);
       }
 
-      // Filter out the one we want for now
-      var filteredArr = listCounterResults.results.filter((counter) => {
-        return counterArr.includes(counter.Name);
-      });
+      try {
+        for (let i = 0; i < counterArr.length; i++) {
+          listInstanceResults = await perfmon_service.listInstance(server, counterArr[i]);
+          const findCounter = listCounterResults.results.find((counter) => counter.Name === counterArr[i]);
+          let MultiInstanceVal = findCounter?.MultiInstance;
+          let MultiInstance = /true/.test(MultiInstanceVal);
+          let locatePercentCounter = findCounter.ArrayOfCounter.item.filter(function (item) {
+            if (item.Name.includes("Percentage") || item.Name.includes("%")) {
+              return item;
+            }
+          });
 
-      // let counter of listCounterResults.results
-      for (let counter of filteredArr) {
-        if (counter.ArrayOfCounter.item.length > 0) {
-          if (counter.MultiInstance === "true") {
-            try {
-              var listInstanceResults = await service.listInstance(server, counter.Name);
-              const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-              await delay(env.PM_COOLDOWN_TIMER); // sleeping to avoid rate limiting
-            } catch (error) {
-              if (error.message.faultcode) {
-                reject(`Error: ${error.message.faultcode} for ${server}.`);
-                return;
-              } else if (error.message == 503) {
-                reject(`Error: ${error.message} received for ${server}.`);
-                return;
-              } else {
-                reject(`Error: ${error} for ${server}.`);
-                return;
-              }
-            }
-            if (listInstanceResults.results.length > 0) {
-              for (const instance of listInstanceResults.results) {
-                for (const item of counter.ArrayOfCounter.item) {
-                  let output = {
-                    host: "",
-                    object: "",
-                    instance: "",
-                    counter: "",
-                  };
-                  output.host = server;
-                  output.object = counter.Name;
-                  output.instance = instance.Name;
-                  output.counter = item.Name;
-                  sessionArray.push(output);
-                }
-              }
-            } else {
-              let output = {
-                host: "",
+          // Loop through the list of instances and counters
+          for (let j = 0; j < locatePercentCounter.length; j++) {
+            for (let k = 0; k < listInstanceResults.results.length; k++) {
+              var collectSessionObj = {
+                host: server,
                 object: "",
                 instance: "",
                 counter: "",
               };
-              output.host = server;
-              output.object = counter.Name;
-              sessionArray.push(output);
-            }
-          } else {
-            for (const item of counter.ArrayOfCounter.item) {
-              let output = {
-                host: "",
-                object: "",
-                instance: "",
-                counter: "",
-              };
-              output.host = server;
-              output.object = counter.Name;
-              output.counter = item.Name;
-              sessionArray.push(output);
+              collectSessionObj.object = counterArr[i];
+              collectSessionObj.instance = MultiInstance ? listInstanceResults.results[k].Name : "";
+              collectSessionObj.counter = locatePercentCounter[j].Name;
+              objectCollectArr.push(collectSessionObj);
             }
           }
         }
+      } catch (error) {
+        console.log(error);
+        process.exit(0);
       }
-      resolve(sessionArray);
+
+      resolve(objectCollectArr);
     });
   }
 };

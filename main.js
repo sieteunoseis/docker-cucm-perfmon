@@ -12,8 +12,6 @@ const program = new Command();
 const sessionSSO = require("./js/sessionSSO");
 const validator = require("validator");
 
-// Add timestamp to console logs, after this point
-// require("log-timestamp");
 
 // This creates a gatekeeper that only allows 2 promises to run at once
 const serverLimit = pLimit(env.PM_SERVER_CONCURRENCY);
@@ -124,14 +122,14 @@ const collectCounterData = async (servers, logPrefix) => {
           log(`${logPrefix}: Collecting data for ${jsonResults.server}.`);
 
           // Set up the perfmon service. We will use this to collect the data from each server.
-          var perfmon_service = new perfMonService(jsonResults.server, env.CUCM_USERNAME, env.CUCM_PASSWORD);
+          var perfmon_service = new perfMonService(jsonResults.server, env.CUCM_USERNAME, env.CUCM_PASSWORD, {}, env.PM_RETRY_FLAG);
           log(`${logPrefix}: Found ${perfmonObjectArr.length} object(s) to collect on ${jsonResults.server}. Collecting ${env.PM_OBJECT_COLLECT_ALL_CONCURRENCY} objects at a time.`);
 
           try {
             const ssoIndex = ssoArr.findIndex((element) => element.name === jsonResults.server);
             if (ssoIndex !== -1) {
               // Update the perfmon service with the SSO auth cookie
-              perfmon_service = new perfMonService(jsonResults.server, "", "", { cookie: ssoArr[ssoIndex].cookie }, false);
+              perfmon_service = new perfMonService(jsonResults.server, "", "", { cookie: ssoArr[ssoIndex].cookie }, env.PM_RETRY_FLAG);
             } else {
               jsonResults.authMethod.basic++;
               // If we don't have a cookie, let's try to get one but doing a listCounter call.
@@ -189,7 +187,6 @@ const collectCounterData = async (servers, logPrefix) => {
           nonPercentageObjects.forEach((object) => {
             points.push(new Point(object.object).tag("host", object.host).tag("cstatus", object.cstatus).tag("instance", object.instance).floatField(object.counter, object.value));
           });
-
 
           let success = {};
           let returnResults = [];
@@ -291,7 +288,7 @@ const collectSessionData = async (servers, logPrefix) => {
         jsonResults.server = server.processNodeName.value;
         log(`${logPrefix}: Collecting data for ${jsonResults.server}.`);
 
-        var perfmon_service = new perfMonService(jsonResults.server, env.CUCM_USERNAME, env.CUCM_PASSWORD, false);
+        var perfmon_service = new perfMonService(jsonResults.server, env.CUCM_USERNAME, env.CUCM_PASSWORD, {}, env.PM_RETRY_FLAG);
         log(`${logPrefix}: Found ${perfmonSessionArr.length} objects to collect on ${jsonResults.server}.`);
 
         // Let's see if we have a cookie for this server, if so we will use it instead of basic auth.
@@ -299,75 +296,57 @@ const collectSessionData = async (servers, logPrefix) => {
         if (ssoIndex !== -1) {
           jsonResults.authMethod.sso++;
           // Update the perfmon service with the SSO auth cookie
-          perfmon_service = new perfMonService(jsonResults.server, "", "", { cookie: ssoArr[ssoIndex].cookie }, false);
+          perfmon_service = new perfMonService(jsonResults.server, "", "", { cookie: ssoArr[ssoIndex].cookie }, env.PM_RETRY_FLAG);
         } else {
           jsonResults.authMethod.basic++;
         }
 
         var objectCollectArr = [];
+        var listCounterResults;
+        var listInstanceResults;
 
-        await perfmon_service
-          .listCounter(jsonResults.server, perfmonSessionArr)
-          .then(async (response) => {
-            const listCounterResults = response.results;
-            const listCounterCookie = response.cookie;
-            if (listCounterCookie) {
-              ssoArr = sessionSSO.updateSSO(jsonResults.server, { cookie: listCounterCookie });
-            }
-            for (item of perfmonSessionArr) {
-              await perfmon_service
-                .listInstance(jsonResults.server, item)
-                .then((response) => {
-                  var listInstanceResults = response;
-                  const findCounter = listCounterResults.find((counter) => counter.Name === item);
-                  var MultiInstance = findCounter.MultiInstance;
-                  var locatePercentCounter = findCounter.ArrayOfCounter.item.filter(function (item) {
-                    if (item.Name.includes("Percentage") || item.Name.includes("%")) {
-                      return item;
-                    }
-                  });
+        try {
+          listCounterResults = await perfmon_service.listCounter(jsonResults.server, perfmonSessionArr);
+          if (listCounterResults?.cookie) {
+            ssoArr = sessionSSO.updateSSO(jsonResults.server, { cookie: listCounterResults?.cookie });
+          }
+        } catch (error) {
+          console.log(error);
+          process.exit(0);
+        }
 
-                  // Loop through the list of instances and counters
-                  for (const counter of locatePercentCounter) {
-                    for (const instance of listInstanceResults.results) {
-                      let output = {
-                        host: "",
-                        object: "",
-                        instance: "",
-                        counter: "",
-                      };
-                      output.host = jsonResults.server;
-                      output.object = item;
-                      output.instance = MultiInstance != "false" ? instance.Name : "";
-                      output.counter = counter.Name;
-                      objectCollectArr.push(output);
-                    }
-                  }
-                })
-                .catch((error) => {
-                  let functionName = "listInstance";
-                  if (error.status >= 500) {
-                    rateControl = true;
-                    jsonResults.results.push({ name: `${functionName}`, message: `Error: ${error.message} for ${jsonResults.server}.` });
-                    resolve();
-                  } else {
-                    log.error(`${functionName} Error:`, error);
-                    process.exit(0);
-                  }
-                });
+        try {
+          for (let i = 0; i < perfmonSessionArr.length; i++) {
+            listInstanceResults = await perfmon_service.listInstance(jsonResults.server, perfmonSessionArr[i]);
+            const findCounter = listCounterResults.results.find((counter) => counter.Name === perfmonSessionArr[i]);
+            let MultiInstanceVal = findCounter?.MultiInstance;
+            let MultiInstance = /true/.test(MultiInstanceVal);
+            let locatePercentCounter = findCounter.ArrayOfCounter.item.filter(function (item) {
+              if (item.Name.includes("Percentage") || item.Name.includes("%")) {
+                return item;
+              }
+            });
+
+            // Loop through the list of instances and counters
+            for (let j = 0; j < locatePercentCounter.length; j++) {
+              for (let k = 0; k < listInstanceResults.results.length; k++) {
+                var collectSessionObj = {
+                  host: jsonResults.server,
+                  object: "",
+                  instance: "",
+                  counter: "",
+                };
+                collectSessionObj.object = perfmonSessionArr[i];
+                collectSessionObj.instance = MultiInstance ? listInstanceResults.results[k].Name : "";
+                collectSessionObj.counter = locatePercentCounter[j].Name;
+                objectCollectArr.push(collectSessionObj);
+              }
             }
-          })
-          .catch((error) => {
-            let functionName = "listCounter";
-            if (error.status >= 500) {
-              rateControl = true;
-              jsonResults.results.push({ name: `${functionName}`, message: `Error: ${error.message} for ${jsonResults.server}.` });
-              resolve();
-            } else {
-              log.error(`${functionName} Error:`, error);
-              process.exit(0);
-            }
-          });
+          }
+        } catch (error) {
+          console.log(error);
+          process.exit(0);
+        }
 
         var functionName = "openSession";
         try {
@@ -397,7 +376,7 @@ const collectSessionData = async (servers, logPrefix) => {
           // Collect the counter data from the server
           let addCounterResults = await perfmon_service.addCounter(sessionId, objectCollectArr);
           if (addCounterResults.results) {
-            jsonResults.results.push({ name: `${functionName}`, message: `Adding object(s) for ${jsonResults.server} with SessionId ${sessionIdResults.results} = ${addCounterResults.results}.` });
+            jsonResults.results.push({ name: `${functionName}`, message: `Adding ${objectCollectArr.length} object(s) for ${jsonResults.server} with SessionId ${sessionIdResults.results} = ${addCounterResults.results}.` });
           } else {
             log("addCounter Error: No results returned.");
             process.exit(0);
@@ -579,7 +558,7 @@ const collectSessionConfig = async (data, logPrefix) => {
           cooldownTimer: coolDownTimer / 1000 + " second(s)",
           intervalTimer: interval / 1000 + " second(s)",
         };
-        var perfmon_service = new perfMonService(env.CUCM_HOSTNAME, env.CUCM_USERNAME, env.CUCM_PASSWORD, false);
+        var perfmon_service = new perfMonService(env.CUCM_HOSTNAME, env.CUCM_USERNAME, env.CUCM_PASSWORD, {}, env.PM_RETRY_FLAG);
         log(`${logPrefix}: Found ${parsedData.length} objects to collect on ${env.CUCM_HOSTNAME}.`);
 
         // Let's see if we have a cookie for this server, if so we will use it instead of basic auth.
@@ -587,7 +566,7 @@ const collectSessionConfig = async (data, logPrefix) => {
         if (ssoIndex !== -1) {
           jsonResults.authMethod.sso++;
           // Update the perfmon service with the SSO auth cookie
-          perfmon_service = new perfMonService(env.CUCM_HOSTNAME, "", "", { cookie: ssoArr[ssoIndex].cookie }, false);
+          perfmon_service = new perfMonService(env.CUCM_HOSTNAME, "", "", { cookie: ssoArr[ssoIndex].cookie }, env.PM_RETRY_FLAG);
         } else {
           jsonResults.authMethod.basic++;
         }
@@ -623,7 +602,7 @@ const collectSessionConfig = async (data, logPrefix) => {
           // Collect the counter data from the server
           let addCounterResults = await perfmon_service.addCounter(sessionId, parsedData);
           if (addCounterResults.results) {
-            jsonResults.results.push({ name: `${functionName}`, message: `Adding object(s) for ${env.CUCM_HOSTNAME} with SessionId ${sessionIdResults.results} = ${addCounterResults.results}.` });
+            jsonResults.results.push({ name: `${functionName}`, message: `Adding ${objectCollectArr.length} object(s) for ${env.CUCM_HOSTNAME} with SessionId ${sessionIdResults.results} = ${addCounterResults.results}.` });
           } else {
             log("addCounter Error: No results returned.");
             process.exit(0);

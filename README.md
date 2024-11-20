@@ -162,6 +162,8 @@ Note: Processor object is a percentage only object. It is suggested to use the P
 
 Tool to convert column to comma separated list: https://convert.town/column-to-comma-separated-list
 
+https://www.cisco.com/c/en/us/td/docs/voice_ip_comm/cucm/service/15/rtmt/cucm_b_cisco-unified-rtmt-administration-15/cucm_m_performance-counters-and-alerts-15.html
+
 ```text
 Cisco Analog Access
 Cisco Annunciator Device
