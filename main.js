@@ -190,9 +190,8 @@ const collectCounterData = async (servers, logPrefix) => {
             points.push(new Point(object.object).tag("host", object.host).tag("cstatus", object.cstatus).tag("instance", object.instance).floatField(object.counter, object.value));
           });
 
-          let errors = {};
-          let success = {};
 
+          let success = {};
           let returnResults = [];
 
           output.forEach((el) => {
@@ -225,21 +224,26 @@ const collectCounterData = async (servers, logPrefix) => {
       return serverLimit(() => getPerfMonData(server));
     });
 
-    // Get the results from all servers via Promise.all. This will wait for all servers to be collected before moving on.
-    const influxResults = await Promise.all(serverPromises);
+    try {
+      // Get the results from all servers via Promise.all. This will wait for all servers to be collected before moving on.
+      const influxResults = await Promise.all(serverPromises);
 
-    // Log the results to the console
-    log(`${logPrefix} RESULTS:`);
-    for (const result of influxResults) {
-      var table = result.results;
-      var authTable = result.authMethod;
-      delete result.authMethod;
-      delete result.results;
-      console.table(result);
-      log(`${logPrefix} Auth Counts:`);
-      console.table(authTable);
-      log(`${logPrefix} Object Results:`);
-      console.table(table);
+      // Log the results to the console
+      log(`${logPrefix} RESULTS:`);
+      for (const result of influxResults) {
+        var table = result.results;
+        var authTable = result.authMethod;
+        delete result.authMethod;
+        delete result.results;
+        console.table(result);
+        log(`${logPrefix} Auth Counts:`);
+        console.table(authTable);
+        log(`${logPrefix} Object Results:`);
+        console.table(table);
+      }
+    } catch (error) {
+      log.error(error);
+      process.exit(0);
     }
 
     // Close the influxDB API
@@ -514,19 +518,24 @@ const collectSessionData = async (servers, logPrefix) => {
       return serverLimit(() => getPerfMonData(server));
     });
 
-    const influxResults = await Promise.all(serverPromises);
+    try {
+      const influxResults = await Promise.all(serverPromises);
 
-    log(`${logPrefix}: RESULTS:`);
-    for (const result of influxResults) {
-      var table = result.results;
-      var authTable = result.authMethod;
-      delete result.authMethod;
-      delete result.results;
-      console.table(result);
-      log(`${logPrefix} Auth Counts:`);
-      console.table(authTable);
-      log(`${logPrefix} Object Results:`);
-      console.table(table);
+      log(`${logPrefix} RESULTS:`);
+      for (const result of influxResults) {
+        const table = result?.results;
+        const authTable = result?.authMethod;
+        delete result.authMethod;
+        delete result.results;
+        console.table(result);
+        log(`${logPrefix} Auth Counts:`);
+        console.table(authTable);
+        log(`${logPrefix} Object Results:`);
+        console.table(table);
+      }
+    } catch (error) {
+      log.error(error);
+      process.exit(0);
     }
 
     await writeApi
@@ -705,18 +714,23 @@ const collectSessionConfig = async (data, logPrefix) => {
       });
     };
 
-    var influxResults = await collectSessionData();
+    try {
+      const influxResults = await collectSessionData();
 
-    log(`${logPrefix} Basic Settings:`);
-    var table = influxResults.results;
-    var authTable = influxResults.authMethod;
-    delete influxResults.authMethod;
-    delete influxResults.results;
-    console.table(influxResults);
-    log(`${logPrefix} Auth Counts:`);
-    console.table(authTable);
-    log(`${logPrefix} Object Results:`);
-    console.table(table);
+      log(`${logPrefix} Basic Settings:`);
+      const table = influxResults.results;
+      const authTable = influxResults.authMethod;
+      delete influxResults.authMethod;
+      delete influxResults.results;
+      console.table(influxResults);
+      log(`${logPrefix} Auth Counts:`);
+      console.table(authTable);
+      log(`${logPrefix} Object Results:`);
+      console.table(table);
+    } catch (error) {
+      log.error(error);
+      process.exit(0);
+    }
 
     await writeApi
       .close()
