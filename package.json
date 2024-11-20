@@ -1,7 +1,7 @@
 {
   "name": "perfmon-influx-exporter",
   "description": "Docker container to collect Cisco Perfmon stats and export to InfluxDB.",
-  "version": "3.0.8",
+  "version": "3.0.9",
   "author": "Jeremy Worden <jeremy@automate.builders>",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "commander": "^12.1.0",
     "dotenv": "*",
     "envalid": "*",
-    "log-timestamp": "^0.3.0",
+    "fancy-log": "^2.0.0",
     "p-limit": "^3.1.0",
     "set-interval-async": "*",
     "validator": "^13.12.0"
